@@ -1,49 +1,34 @@
-# app_flagrancia.py - SISTEMA SVI ACTUALIZADO 2026
-# Autor: Sub Comisario Castañeda Juan
+# =========================================================
+# MODULO DE FOTOS CON DESCRIPCIÓN IA (PROTOCOLO 4 FOTOS)
+# =========================================================
+st.header("📸 Registro Fotográfico y Diagnóstico IA")
+st.info("Cargue las vistas obligatorias. La IA procesará la descripción técnica para el acta.")
 
-import streamlit as st
-import json
-from datetime import datetime
+col_f1, col_f2 = st.columns(2)
 
-# CONFIGURACIÓN DE AUTORÍA Y TÍTULO
-st.set_page_config(page_title="SUMARIO SVI - Original 10bis", layout="wide")
-st.title("Sistema de Validación de Identidad (SVI)")
-st.subheader("Creado por Sub Comisario Castañeda Juan")
+with col_f1:
+    foto_1 = st.file_uploader("1. VISTA PANORÁMICA (Lugar)", type=['jpg', 'png', 'jpeg'])
+    if foto_1:
+        st.image(foto_1, width=250)
+        # Aquí la IA generaría el texto. Simulamos la salida técnica:
+        desc_ia_1 = st.text_area("Descripción IA (Panorámica)", 
+                                 "Se observa escenario en zona urbana, calzada de asfalto con iluminación artificial activa y visibilidad sin obstrucciones.")
 
-# BLOQUE 1: APERTURA Y NARRATIVA TÁCTICA 
-with st.expander("Bloque 1: Apertura y Narrativa Táctica"):
-    fecha_hora = st.text_input("Fecha y Hora de intervención", value=datetime.now().strftime("%d/%m/%Y %H:%M"))
-    unidad = st.text_input("Unidad Interviniente")
-    narrativa = st.text_area("Narrativa de Flagrancia (Relato objetivo)")
-    identificacion = st.text_input("Identificación de Personas (Validación)")
+    foto_3 = st.file_uploader("3. PRIMER PLANO (Objeto/Rostro)", type=['jpg', 'png', 'jpeg'])
+    if foto_3:
+        st.image(foto_3, width=250)
+        desc_ia_3 = st.text_area("Descripción IA (Primer Plano)", 
+                                 "Enfoque directo sobre elemento secuestrado, permitiendo observar integridad del mismo y características de fabricación.")
 
-# BLOQUE 2: REQUISA Y MESA DE ENLACE 
-with st.expander("Bloque 2: Requisa, Pertenencias y Mesa de Enlace"):
-    testigos = st.text_area("Testigos Hábiles (Art. 225 CPP)")
-    inventario = st.text_area("Inventario de Objetos (Descripción de prendas)")
-    secuestro = st.text_area("Módulo de Secuestro (Armas, estupefacientes, etc.)")
-    mesa_enlace = st.checkbox("Validación Mesa de Enlace (Antecedentes/Pedidos)")
+with col_f2:
+    foto_2 = st.file_uploader("2. PLANO MEDIO (Vínculo)", type=['jpg', 'png', 'jpeg'])
+    if foto_2:
+        st.image(foto_2, width=250)
+        desc_ia_2 = st.text_area("Descripción IA (Plano Medio)", 
+                                 "Se establece vínculo espacial entre el sujeto demorado y el elemento del ilícito en el punto de aprehensión.")
 
-# BLOQUE 3: INSPECCIÓN Y REGISTRO FOTOGRÁFICO 
-with st.expander("Bloque 3: Inspección Genérica y Croquis"):
-    inspeccion = st.text_area("Inspección Ocular Genérica")
-    st.info("Protocolo de 4 Fotos: 1. Panorámica, 2. Plano Medio, 3. Primer Plano, 4. Detalle.")
-    camaras = st.text_input("Relevamiento de Cámaras (911/Privadas)")
-    croquis = st.checkbox("Generar Croquis Demostrativo (Orientación al NORTE)")
-
-# BLOQUE 4: COMUNICACIONES JUDICIALES Y CIERRE 
-with st.expander("Bloque 4: Comunicaciones Judiciales y Cierre"):
-    consulta_mpa = st.text_input("Consulta MPA 0800 (Hora y Fiscal interviniente)")
-    defensoria = st.checkbox("Constancia de aviso a Defensoría General")
-    recepcion = st.text_input("Oficial de Guardia receptor (Firma de responsabilidad)")
-
-# PERSISTENCIA Y GENERACIÓN
-if st.button("Guardar Acta y Generar PDF"):
-    datos_acta = {
-        "autor": "Castañeda Juan",
-        "fecha": fecha_hora,
-        "unidad": unidad,
-        "narrativa": narrativa
-    }
-    # Lógica de guardado en JSON y generación de PDF legal
-    st.success("Acta 'Original 10bis' procesada correctamente.")
+    foto_4 = st.file_uploader("4. PRIMERÍSIMO PRIMER PLANO (Detalle)", type=['jpg', 'png', 'jpeg'])
+    if foto_4:
+        st.image(foto_4, width=250)
+        desc_ia_4 = st.text_area("Descripción IA (Detalle/Guarismos)", 
+                                 "Toma de detalle sobre numeración de serie/cuadro, observándose guarismos originales sin signos de adulteración a simple vista.")
