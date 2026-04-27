@@ -1,13 +1,14 @@
 import streamlit as st
 from datetime import datetime
 
-# --- CONFIGURACIÓN TÁCTICA ---
+# --- CONFIGURACIÓN DE LA APP ---
 st.set_page_config(page_title="SVI - Acta de Procedimiento", layout="wide")
 
-# Estilo profesional UR II
+# Estilo para que se vea profesional en el celular
 st.markdown("""
     <style>
-    .stTabs [aria-selected="true"] { background-color: #002d52 !important; color: white !important; }
+    .main { background-color: #f5f7f9; }
+    .stTabs [aria-selected="true"] { background-color: #002d52 !important; color: white !important; font-weight: bold; }
     .stExpander { border: 1px solid #002d52; border-radius: 10px; background-color: white; }
     </style>
     """, unsafe_allow_html=True)
@@ -15,114 +16,118 @@ st.markdown("""
 st.title("🛡️ Sistema SVI: Acta de Procedimiento")
 st.caption("Autoría: SubComisario Castañeda Juan | Jurisdicción UR II")
 
-# --- MEMORIA OPERATIVA ---
-if 'relato_final' not in st.session_state: st.session_state.relato_final = ""
+# Inicializamos el relato en la memoria del programa
+if 'relato_final' not in st.session_state:
+    st.session_state.relato_final = ""
 
-tab1, tab2, tab3, tab4 = st.tabs(["📝 RELATO", "👥 DETENIDOS/911", "🚗 VEHÍCULOS/SECUESTROS", "📄 ACTA FINAL"])
+tabs = st.tabs(["📝 1. Inicio y Relato", "👥 2. Detenidos", "🔍 3. Secuestros/Salud", "📄 4. Acta Final"])
 
-# --- TAB 1: RELATO ---
-with tab1:
+# --- TAB 1: INICIO Y RELATO ---
+with tabs[0]:
     st.subheader("📍 Inicio del Procedimiento")
     c1, c2 = st.columns(2)
     with c1:
-        cuij = st.text_input("CUIJ / Nro Acta", value="21-")
-        dependencia = st.selectbox("Unidad Operativa", ["Comisaría 22°", "Subcomisaría 18°", "Comando Pérez", "PAT"])
+        nro_acta = st.text_input("CUIJ / Nro Acta", placeholder="Ej: 221/26")
+        dependencia = st.selectbox("Dependencia", ["Comisaría 22°", "Subcomisaría 18°", "Comando Pérez", "PAT"])
     with c2:
-        lugar = st.text_input("Lugar del Hecho (Calle, Altura, Localidad)")
-        preventor = st.text_input("Oficial Actuante", value="SubComisario Castañeda Juan")
+        lugar = st.text_input("Lugar del Hecho (Calle y Altura)")
+        preventor = st.text_input("Preventor Actuante", value="SubComisario Castañeda Juan")
 
-    relato_raw = st.text_area("Narrativa del hecho (Dictado):", height=150)
-    if st.button("✨ PROFESIONALIZAR RELATO"):
+    relato_raw = st.text_area("Narrativa del hecho (Dictado rápido):", height=150)
+    if st.button("✨ PROFESIONALIZAR TEXTO"):
+        # Limpieza técnica del lenguaje
         t = relato_raw.lower().replace("vago", "masculino").replace("fierro", "arma de fuego").replace("chata", "unidad móvil")
         st.session_state.relato_final = t.capitalize()
-        st.success("Relato técnico generado.")
+        st.success("Relato técnico generado con éxito.")
 
-# --- TAB 2: DETENIDOS Y CONSULTA CÓNDOR ---
-with tab2:
-    st.subheader("👤 Identificación y Consultas 911")
-    cant_det = st.number_input("Cantidad de sujetos", min_value=1, max_value=10, value=1)
+# --- TAB 2: DETENIDOS Y CONSULTA 911 ---
+with tabs[1]:
+    st.subheader("👤 Identificación de Aprehendidos")
+    cant_det = st.number_input("¿Cuántos detenidos?", min_value=1, max_value=10, value=1)
     
     lista_detenidos = []
     
     for i in range(cant_det):
-        with st.expander(f"FILIACIÓN COMPLETA - SUJETO N° {i+1}", expanded=True):
-            # Foto Robusta (Opción B)
-            foto = st.file_uploader(f"Capturar Fotografía (Sujeto {i+1})", type=['jpg','png'], key=f"foto_{i}")
-            if foto: st.image(foto, width=150)
+        with st.expander(f"DATOS DEL DETENIDO N° {i+1}", expanded=True):
+            # 1. Cámara / Foto (Uso de st.camera_input para mayor compatibilidad)
+            foto_det = st.camera_input(f"Foto Detenido {i+1}", key=f"cam_{i}")
             
-            # Datos de Filiación (Según imagen enviada)
-            f1, f2, f3, f4 = st.columns([2, 3, 3, 2])
-            dni_i = f1.text_input("DNI", key=f"dni_{i}")
-            ape_i = f2.text_input("Apellido", key=f"ape_{i}")
-            nom_i = f3.text_input("Nombre", key=f"nom_{i}")
-            apo_i = f4.text_input("Apodo", key=f"apo_{i}")
+            # 2. Datos según su planilla de Excel
+            col1, col2, col3 = st.columns(3)
+            dni_i = col1.text_input("DNI", key=f"dni_{i}")
+            ape_i = col2.text_input("Apellido", key=f"ape_{i}")
+            nom_i = col3.text_input("Nombre", key=f"nom_{i}")
             
-            f_padres = st.columns(2)
-            papa_i = f_padres[0].text_input("Hijo de (Padre)", key=f"pa_{i}")
-            mama_i = f_padres[1].text_input("Hijo de (Madre)", key=f"ma_{i}")
+            col4, col5, col6 = st.columns(3)
+            apo_i = col4.text_input("Apodo", key=f"apo_{i}")
+            papa_i = col5.text_input("Hijo de (Padre)", key=f"pa_{i}")
+            mama_i = col6.text_input("Hijo de (Madre)", key=f"ma_{i}")
             
-            f_clase = st.columns(3)
-            edad_i = f_clase[0].text_input("Edad", key=f"ed_{i}")
-            prof_i = f_clase[1].text_input("Profesión", key=f"prof_{i}")
-            dom_i = f_clase[2].text_input("Domicilio", key=f"dom_{i}")
+            col7, col8, col9 = st.columns(3)
+            edad_i = col7.text_input("Edad", key=f"ed_{i}")
+            prof_i = col8.text_input("Profesión", key=f"prof_{i}")
+            dom_i = col9.text_input("Domicilio", key=f"dom_{i}")
 
-            st.markdown("**🔍 Consulta Sistema Cóndor / 911**")
-            c_911 = st.columns([2, 3])
-            op_i = c_911[0].text_input("Operador 911", key=f"op_{i}", placeholder="Nro de Operador")
-            res_i = c_911[1].selectbox("Resultado", ["SIN REQUERIMIENTO", "CON PEDIDO DE CAPTURA", "PEDIDO DE PARADERO"], key=f"res_{i}")
+            # 3. Consulta al 911 (Cóndor) integrada
+            st.markdown("---")
+            st.markdown("**📞 Consulta Sistema Cóndor / 911**")
+            c_911_a, c_911_b = st.columns([1, 2])
+            op_i = c_911_a.text_input("Operador Nro", key=f"op_{i}", placeholder="Ej: 45")
+            res_i = c_911_b.selectbox("Resultado Consulta", 
+                                     ["SIN REQUERIMIENTO", "CON PEDIDO DE CAPTURA ACTIVO", "PEDIDO DE PARADERO"], 
+                                     key=f"res_{i}")
             
-            # Guardamos con nombres únicos para evitar el NameError
-            lista_detenidos.append({
-                "full": f"{ape_i} {nom_i}", "dni": dni_i, "padres": f"{papa_i} y {mama_i}",
-                "datos": f"{edad_i} años, de profesión {prof_i}, domiciliado en {dom_i}",
-                "op": op_i, "resultado": res_i
-            })
+            # Solo agregamos a la lista si hay un DNI o Apellido para evitar el NameError
+            if dni_i or ape_i:
+                lista_detenidos.append({
+                    "dni": dni_i, "full": f"{ape_i} {nom_i}", "papa": papa_i, "mama": mama_i,
+                    "edad": edad_i, "prof": prof_i, "dom": dom_i, "op": op_i, "res": res_i
+                })
 
-# --- TAB 3: VEHÍCULOS E INSPECCIÓN ---
-with tab3:
-    st.subheader("🚗 Consulta Vehicular y Secuestros")
-    usa_vehiculo = st.checkbox("¿Involucra Vehículo?")
-    datos_v = {}
+# --- TAB 3: SECUESTROS Y SALUD ---
+with tabs[2]:
+    st.subheader("🚗 Vehículos e Inspección Ocular")
+    con_vehiculo = st.checkbox("¿Hubo vehículo involucrado?")
+    vehiculo_data = {}
     
-    if usa_vehiculo:
-        v1, v2, v3 = st.columns(3)
-        dominio = v1.text_input("Dominio")
-        modelo = v2.text_input("Marca/Modelo")
+    if con_vehiculo:
+        v1, v2 = st.columns(2)
+        dominio = v1.text_input("Dominio (Patente)")
+        modelo = v2.text_input("Marca y Modelo")
+        
+        v3, v4 = st.columns(2)
         op_v = v3.text_input("Operador 911 (Vehicular)")
-        res_v = st.selectbox("Resultado Consulta Rodado", ["SIN NOVEDAD", "CON PEDIDO DE SECUESTRO ACTIVO"])
-        datos_v = {"dom": dominio, "mod": modelo, "op": op_v, "res": res_v}
+        res_v = v4.selectbox("Estado Rodado", ["SIN NOVEDAD", "CON PEDIDO DE SECUESTRO"])
+        vehiculo_data = {"dom": dominio, "mod": modelo, "op": op_v, "res": res_v}
 
     st.divider()
-    st.subheader("🔍 Inspección Ocular y Lesiones")
-    insp_ocular = st.text_area("Descripción del lugar/escena (Protocolar):")
-    lesiones = st.text_area("Constatación de Lesiones (Detenidos/Personal):")
+    st.subheader("🩹 Integridad Física (Lesiones)")
+    lesiones_det = st.text_area("Lesiones en Detenidos (Descripción y fotos):")
+    lesiones_pol = st.text_area("Lesiones en Personal Policial (si las hubiera):")
 
 # --- TAB 4: ACTA FINAL ---
-with tab4:
+with tabs[3]:
     st.subheader("📄 Acta de Procedimiento Consolidada")
     ahora = datetime.now()
     
-    # Redacción dinámica de consultas 911
-    narrativa_911 = ""
+    # Construcción narrativa de las consultas 911
+    txt_911 = ""
     for d in lista_detenidos:
-        if d['dni']: # Solo si se cargó el DNI
-            narrativa_911 += f"Que consultado el sistema de emergencias 911 a través del operador {d['op']}, el mismo informa que sobre el llamado {d['full'].upper()} pesa un resultado de {d['resultado']}. "
+        txt_911 += f"Que consultado el sistema 911 a través del operador {d['op']}, el mismo informa que sobre el llamado {d['full'].upper()}, DNI {d['dni']}, pesa un resultado de {d['res']}. "
     
-    narrativa_v = ""
-    if usa_vehiculo and datos_v.get('dom'):
-        narrativa_v = f"Asimismo, se realiza consulta sobre el rodado {datos_v['mod']} dominio {datos_v['dom']}, informando el operador {datos_v['op']} que el mismo se encuentra {datos_v['res']}. "
+    txt_v = ""
+    if con_vehiculo and vehiculo_data.get('dom'):
+        txt_v = f"Asimismo, se consulta sobre el rodado {vehiculo_data['mod']} dominio {vehiculo_data['dom']}, informando el operador {vehiculo_data['op']} que el mismo se encuentra {vehiculo_data['res']}. "
 
-    # Construcción final
-    acta = f"""En la ciudad de Pérez, a los {ahora.day} días del mes de Abril de {ahora.year}, siendo las {ahora.strftime('%H:%M')} horas...
+    # Acta final integrada
+    acta_final = f"""En la ciudad de Pérez, a los {ahora.day} días del mes de Abril de {ahora.year}, siendo las {ahora.strftime('%H:%M')} horas, el suscripto {preventor.upper()}, personal de la {dependencia}, hace constar: Que en circunstancias de {st.session_state.relato_final}, en {lugar}. 
 
-CONSTAR: Que en circunstancias de {st.session_state.relato_final}, en {lugar}.
+{txt_911}
+{txt_v}
 
-{narrativa_911}
-{narrativa_v}
+CONSTATACIÓN DE LESIONES: Se deja constancia que {lesiones_det if lesiones_det else 'no se observan lesiones a simple vista en los causantes'}. Por parte del personal, {lesiones_pol if lesiones_pol else 'no se registran novedades físicas'}.
 
-INSPECCIÓN Y LESIONES: {insp_ocular}. En cuanto a la integridad física, se hace constar que {lesiones}.
+Se procede al traslado de los mismos a sede policial para los trámites de rigor."""
 
-Se procede al traslado de los causantes y efectos a sede de la {dependencia} para continuar con las actuaciones de rigor."""
-
-    st.code(acta, language=None)
-    st.button("📋 COPIAR ACTA COMPLETA")
+    st.code(acta_final, language=None)
+    st.button("📋 COPIAR ACTA")
