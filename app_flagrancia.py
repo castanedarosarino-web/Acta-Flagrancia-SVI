@@ -3,40 +3,45 @@ import json
 from datetime import datetime
 
 # =========================================================
-# BLOQUE 1: DATOS Y NARRATIVA POR AUDIO (EL CORAZÓN)
+# ACTA DE PROCEDIMIENTO
+# Autor: Sub Comisario Castañeda Juan
 # =========================================================
 
-# Título y Autoría (Para que no se pierda)
-st.title("SISTEMA SVI - Original 10bis")
-st.subheader("Creado por Sub Comisario Castañeda Juan")
+# Configuración de página y Título Reglamentario
+st.set_page_config(page_title="Acta de Procedimiento", layout="wide")
+st.markdown("<h1 style='text-align: center;'>ACTA DE PROCEDIMIENTO</h1>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center;'>Creado por Sub Comisario Castañeda Juan</h3>", unsafe_allow_html=True)
 
-with st.expander("📝 BLOQUE 1: DATOS Y NARRATIVA POR AUDIO", expanded=True):
+# BLOQUE 1: DATOS Y NARRATIVA POR AUDIO
+with st.container():
+    st.subheader("📝 Bloque 1: Datos Generales")
     col1, col2 = st.columns(2)
     with col1:
-        fecha_proc = st.date_input("Fecha del Hecho", datetime.now())
+        fecha_proc = st.date_input("Fecha", datetime.now())
         unidad_interviniente = st.text_input("Dependencia", "COMANDO RADIOELÉCTRICO PÉREZ")
     with col2:
-        hora_proc = st.time_input("Hora de Intervención", datetime.now())
+        hora_proc = st.time_input("Hora de Inicio", datetime.now())
         oficial_actuante = st.text_input("Oficial Actuante", "Sub Comisario Castañeda Juan")
     
     st.markdown("---")
-    st.subheader("🎙️ Dictado del Acta")
-    st.info("Presione el micrófono para relatar el procedimiento. El sistema transcribirá su voz.")
+    st.subheader("🎙️ Narrativa del Hecho")
+    st.info("Utilice el micrófono para dictar el relato de flagrancia. El sistema convertirá su voz en texto para el acta.")
     
-    # Este es el componente que captura el audio del oficial
-    audio_file = st.audio_input("Grabar relato de flagrancia")
+    # Componente de entrada de audio para el personal de calle
+    audio_file = st.audio_input("Grabar relato")
     
     if audio_file:
-        st.success("Audio capturado correctamente.")
-        # Aquí el oficial podrá ver y corregir lo que dictó
+        st.success("Audio capturado. El texto aparecerá a continuación para su revisión:")
         narrativa = st.text_area(
-            "Narrativa Transcripta (Editable)", 
-            placeholder="En circunstancias que el móvil se encontraba patrullando...",
-            height=250
+            "Cuerpo del Acta (Editable)", 
+            placeholder="Relate aquí los pormenores del procedimiento...",
+            height=300
         )
     else:
         narrativa = st.text_area(
-            "Narrativa Manual (Si no usa dictado)", 
-            placeholder="Escriba aquí si no puede usar el micrófono...",
-            height=250
+            "Cuerpo del Acta (Escritura Manual)", 
+            placeholder="En circunstancias que el móvil policial se encontraba patrullando...",
+            height=300
         )
+
+st.caption("Documento generado bajo protocolo profesional - Autoría: Sub Comisario Castañeda Juan")
