@@ -1,8 +1,8 @@
-import os
 import streamlit as st
 from datetime import datetime, date
 import json
 import base64
+import os
 from io import BytesIO
 from PIL import Image
 from openai import OpenAI
@@ -14,16 +14,11 @@ st.set_page_config(
 )
 
 # =========================
-# CONFIGURACIÓN IA
+# CONFIGURACIÓN IA - RENDER
 # =========================
 
 def get_client():
     api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not api_key:
-        try:
-            api_key = st.secrets.get("OPENAI_API_KEY", "")
-        except Exception:
-            api_key = ""
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
@@ -36,7 +31,7 @@ def ia_disponible():
 def llamar_ia_texto(prompt, sistema="Sos un asistente policial especializado en redacción de actas de procedimiento de Santa Fe. Respondé en español formal, claro y operativo."):
     client = get_client()
     if client is None:
-        return "IA no disponible. Configure OPENAI_API_KEY en Streamlit Secrets."
+        return "IA no disponible. Configure OPENAI_API_KEY en Render Environment."
 
     try:
         resp = client.chat.completions.create(
@@ -62,7 +57,7 @@ def imagen_a_base64(uploaded_file):
 def llamar_ia_imagen(uploaded_file, prompt):
     client = get_client()
     if client is None:
-        return "IA no disponible. Configure OPENAI_API_KEY en Streamlit Secrets."
+        return "IA no disponible. Configure OPENAI_API_KEY en Render Environment."
 
     try:
         img_b64 = imagen_a_base64(uploaded_file)
@@ -312,7 +307,7 @@ def generar_inspeccion(data):
 
 
 # =========================
-# UI
+# INTERFAZ
 # =========================
 
 inicializar()
@@ -320,9 +315,9 @@ inicializar()
 st.title("🚔 Asistente de Actas en Flagrancia")
 
 if ia_disponible():
-    st.success("IA activa: clave OPENAI_API_KEY detectada.")
+    st.success("IA activa: OPENAI_API_KEY detectada en Render.")
 else:
-    st.warning("IA no activa: falta OPENAI_API_KEY en Streamlit Secrets.")
+    st.warning("IA no activa: falta OPENAI_API_KEY en Render Environment.")
 
 tabs = st.tabs(["1. Encabezado", "2. Arrestado", "3. Inspección", "4. Cierre", "Vista final"])
 
