@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from datetime import datetime, date
 import json
@@ -17,7 +18,12 @@ st.set_page_config(
 # =========================
 
 def get_client():
-    api_key = st.secrets.get("OPENAI_API_KEY", "")
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        try:
+            api_key = st.secrets.get("OPENAI_API_KEY", "")
+        except Exception:
+            api_key = ""
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
