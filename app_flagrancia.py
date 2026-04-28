@@ -1,9 +1,7 @@
 import streamlit as st
 from datetime import datetime, date
 import json
-import base64
 import os
-from io import BytesIO
 from PIL import Image
 import google.generativeai as genai
 
@@ -17,12 +15,15 @@ st.set_page_config(
 # CONFIGURACIÓN IA - GEMINI / RENDER
 # =====================================================
 
+GEMINI_MODEL_NAME = "gemini-2.0-flash"
+
+
 def get_gemini_model():
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         return None
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-2.0-flash")
+    return genai.GenerativeModel(GEMINI_MODEL_NAME)
 
 
 def ia_disponible():
@@ -540,7 +541,7 @@ st.title("🚔 Asistente de Actas en Flagrancia")
 st.caption("Creado por SubComisario CASTAÑEDA Juan")
 
 if ia_disponible():
-    st.success("IA activa: GEMINI_API_KEY detectada en Render.")
+    st.success(f"IA activa: GEMINI_API_KEY detectada en Render. Modelo: {GEMINI_MODEL_NAME}")
 else:
     st.warning("IA no activa: falta GEMINI_API_KEY en Render Environment.")
 
