@@ -5,7 +5,7 @@ import base64
 import os
 from io import BytesIO
 from PIL import Image
-from openai import OpenAI
+import google.generativeai as genai
 
 st.set_page_config(
     page_title="Acta Flagrancia SVI",
@@ -14,87 +14,62 @@ st.set_page_config(
 )
 
 # =====================================================
-# CONFIGURACIÓN IA - RENDER
+# CONFIGURACIÓN IA - GEMINI / RENDER
 # =====================================================
 
-def get_client():
-    api_key = os.environ.get("OPENAI_API_KEY", "")
+def get_gemini_model():
+    api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         return None
-    return OpenAI(api_key=api_key)
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 
 def ia_disponible():
-    return get_client() is not None
+    return get_gemini_model() is not None
 
 
-def llamar_ia_texto(
-    prompt,
-    sistema=(
+def llamar_ia_texto(prompt):
+    model = get_gemini_model()
+    if model is None:
+        return "IA no disponible. Configure GEMINI_API_KEY en Render Environment."
+
+    sistema = (
         "Sos un asistente policial especializado en redacción de actas de procedimiento "
         "de la Policía de la Provincia de Santa Fe. Respondé en español formal, claro, "
-        "operativo y con estilo de acta policial. No uses lenguaje de IA ni de formulario."
-    ),
-):
-    client = get_client()
-    if client is None:
-        return "IA no disponible. Configure OPENAI_API_KEY en Render Environment."
+        "operativo y con estilo de acta policial. No uses lenguaje de IA ni de formulario. "
+        "No inventes datos. Si falta información, indicá que debe completarse."
+    )
 
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": sistema},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.2,
-        )
-        return resp.choices[0].message.content.strip()
+        resp = model.generate_content(f"{sistema}\n\n{prompt}")
+        return resp.text.strip()
     except Exception as e:
-        return f"Error IA: {e}"
+        return f"Error IA Gemini: {e}"
 
 
-def imagen_a_base64(uploaded_file):
-    image = Image.open(uploaded_file).convert("RGB")
-    buffer = BytesIO()
-    image.save(buffer, format="JPEG")
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+def imagen_a_pil(uploaded_file):
+    return Image.open(uploaded_file).convert("RGB")
 
 
 def llamar_ia_imagen(uploaded_file, prompt):
-    client = get_client()
-    if client is None:
-        return "IA no disponible. Configure OPENAI_API_KEY en Render Environment."
+    model = get_gemini_model()
+    if model is None:
+        return "IA no disponible. Configure GEMINI_API_KEY en Render Environment."
+
+    sistema = (
+        "Sos un asistente policial. Describís imágenes para actas en español formal. "
+        "No identifiques personas. No diagnostiques lesiones. No digas 'en la imagen se observa'. "
+        "Redactá como constatación policial validable por el personal actuante. "
+        "No inventes marcas, numeraciones, calibres o datos no visibles."
+    )
 
     try:
-        img_b64 = imagen_a_base64(uploaded_file)
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Sos un asistente policial. Describís imágenes para actas en español formal. "
-                        "No identifiques personas. No diagnostiques lesiones. No digas 'en la imagen se observa'. "
-                        "Redactá como constatación policial validable por el personal actuante."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"},
-                        },
-                    ],
-                },
-            ],
-            temperature=0.2,
-        )
-        return resp.choices[0].message.content.strip()
+        img = imagen_a_pil(uploaded_file)
+        resp = model.generate_content([sistema + "\n\n" + prompt, img])
+        return resp.text.strip()
     except Exception as e:
-        return f"Error IA imagen: {e}"
+        return f"Error IA imagen Gemini: {e}"
 
 
 # =====================================================
@@ -565,9 +540,9 @@ st.title("🚔 Asistente de Actas en Flagrancia")
 st.caption("Creado por SubComisario CASTAÑEDA Juan")
 
 if ia_disponible():
-    st.success("IA activa: OPENAI_API_KEY detectada en Render.")
+    st.success("IA activa: GEMINI_API_KEY detectada en Render.")
 else:
-    st.warning("IA no activa: falta OPENAI_API_KEY en Render Environment.")
+    st.warning("IA no activa: falta GEMINI_API_KEY en Render Environment.")
 
 tabs = st.tabs(["1. Encabezado", "2. Arrestado", "3. Inspección", "4. Cierre", "Vista final"])
 
