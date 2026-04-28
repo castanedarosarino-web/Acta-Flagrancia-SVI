@@ -1,77 +1,12 @@
 import streamlit as st
 from datetime import datetime, date
 import json
-import os
-from PIL import Image
-import google.generativeai as genai
 
 st.set_page_config(
     page_title="Acta Flagrancia SVI",
     layout="wide",
     page_icon="🚔"
 )
-
-# =====================================================
-# CONFIGURACIÓN IA - GEMINI / RENDER
-# =====================================================
-
-GEMINI_MODEL_NAME = "gemini-2.0-flash"
-
-
-def get_gemini_model():
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        return None
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(GEMINI_MODEL_NAME)
-
-
-def ia_disponible():
-    return get_gemini_model() is not None
-
-
-def llamar_ia_texto(prompt):
-    model = get_gemini_model()
-    if model is None:
-        return "IA no disponible. Configure GEMINI_API_KEY en Render Environment."
-
-    sistema = (
-        "Sos un asistente policial especializado en redacción de actas de procedimiento "
-        "de la Policía de la Provincia de Santa Fe. Respondé en español formal, claro, "
-        "operativo y con estilo de acta policial. No uses lenguaje de IA ni de formulario. "
-        "No inventes datos. Si falta información, indicá que debe completarse."
-    )
-
-    try:
-        resp = model.generate_content(f"{sistema}\n\n{prompt}")
-        return resp.text.strip()
-    except Exception as e:
-        return f"Error IA Gemini: {e}"
-
-
-def imagen_a_pil(uploaded_file):
-    return Image.open(uploaded_file).convert("RGB")
-
-
-def llamar_ia_imagen(uploaded_file, prompt):
-    model = get_gemini_model()
-    if model is None:
-        return "IA no disponible. Configure GEMINI_API_KEY en Render Environment."
-
-    sistema = (
-        "Sos un asistente policial. Describís imágenes para actas en español formal. "
-        "No identifiques personas. No diagnostiques lesiones. No digas 'en la imagen se observa'. "
-        "Redactá como constatación policial validable por el personal actuante. "
-        "No inventes marcas, numeraciones, calibres o datos no visibles."
-    )
-
-    try:
-        img = imagen_a_pil(uploaded_file)
-        resp = model.generate_content([sistema + "\n\n" + prompt, img])
-        return resp.text.strip()
-    except Exception as e:
-        return f"Error IA imagen Gemini: {e}"
-
 
 # =====================================================
 # DATOS FIJOS / UTILIDADES
@@ -123,9 +58,33 @@ DOCUMENTOS_ENTREGA = [
     "otro",
 ]
 
+TIPOS_SECUESTRO = [
+    "Arma de fuego",
+    "Arma blanca",
+    "Dinero",
+    "Teléfono celular",
+    "Efectos personales",
+    "Documentación",
+    "Herramienta / elemento de fuerza",
+    "Estupefaciente aparente",
+    "Vehículo / motovehículo",
+    "Otro",
+]
+
 
 def formato_fecha_larga(fecha):
     return f"{fecha.day} días del mes de {MESES[fecha.month]} del año {fecha.year}"
+
+
+def limpiar_texto(texto):
+    return (texto or "").strip()
+
+
+def edad(fecha_nac):
+    if not fecha_nac:
+        return ""
+    hoy = date.today()
+    return hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
 
 
 def inicializar():
@@ -141,13 +100,6 @@ def inicializar():
             st.session_state[k] = v
 
 
-def edad(fecha_nac):
-    if not fecha_nac:
-        return ""
-    hoy = date.today()
-    return hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
-
-
 def persona(p):
     ap = p.get("apellido", "").upper().strip()
     nom = p.get("nombre", "").upper().strip()
@@ -156,10 +108,6 @@ def persona(p):
     if dni and base:
         return f"{base}, DNI N° {dni}"
     return base or "persona no identificada"
-
-
-def limpiar_texto(texto):
-    return (texto or "").strip()
 
 
 def agregar_arrestado():
@@ -219,6 +167,112 @@ def agregar_testigo():
         }
     )
 
+
+# =====================================================
+# PEDIDOS PARA CHATGPT
+# =====================================================
+
+def pedido_chatgpt_relato(relato):
+    return f"""COPIAR Y PEGAR EN CHATGPT:
+
+Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento. No uses lenguaje de IA. No pongas título "Relato del hecho". Redactá en estilo policial, como texto corrido que pueda continuar luego de "SE HACE CONSTAR:". Empezá con "Que..." y mantené una redacción clara, formal y técnica. No inventes datos; si falta algo, indicá al final qué dato debe completarse.
+
+Relato aportado:
+{relato}
+"""
+
+
+def pedido_chatgpt_arrestado(nombre_referencia=""):
+    ref = f" de {nombre_referencia}" if nombre_referencia else ""
+    return f"""COPIAR Y PEGAR EN CHATGPT JUNTO CON LA FOTO:
+
+Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito una descripción breve para incorporar a un acta de procedimiento{ref}. Describí únicamente vestimenta, contextura y aspecto externo visible. No identifiques a la persona. No describas lesiones ni diagnostiques. No digas "en la imagen se observa" ni "en la foto se aprecia". Redactá en estilo policial directo, como texto listo para copiar al acta. La descripción debe ser breve, objetiva y validable por el personal actuante.
+"""
+
+
+def pedido_chatgpt_secuestro(tipo, vinculado, lugar_hallazgo, caracter):
+    return f"""COPIAR Y PEGAR EN CHATGPT JUNTO CON LA FOTO:
+
+Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito describir técnicamente un elemento para acta de procedimiento. No uses lenguaje de IA. No digas "en la imagen se observa" ni "en la foto se aprecia". Redactá directo, como constatación policial validable por el personal actuante.
+
+Datos del procedimiento:
+- Tipo de elemento: {tipo}
+- Vinculado a / en poder de: {vinculado}
+- Lugar de hallazgo: {lugar_hallazgo}
+- Carácter propuesto: {caracter}
+
+Instrucciones:
+1. Describí el elemento en forma técnica, clara y breve.
+2. Si es arma de fuego, no afirmes calibre, aptitud de disparo, numeración, marca o funcionamiento si no surge claramente o si no fue informado.
+3. Si son efectos personales, redactá en estilo depósito, dejando claro a quién pertenecen o respecto de quién se resguardan.
+4. Indicá si corresponde como elemento de interés para la causa o depósito, pero aclarando que debe validarlo el personal actuante.
+5. Entregá solo el texto final para copiar al acta.
+"""
+
+
+def pedido_chatgpt_inspeccion():
+    return """COPIAR Y PEGAR EN CHATGPT JUNTO CON LAS FOTOS:
+
+Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito redactar una inspección ocular técnica para agregar en foja siguiente. No uses lenguaje de IA. No digas "en la imagen se observa" ni "en la foto se aprecia". Redactá como constatación policial del personal actuante.
+
+Debe incluir, si surge de las fotos:
+- descripción general del lugar;
+- tipo de escenario: vía pública, comercio, domicilio, vehículo u otro;
+- accesos y egresos;
+- iluminación;
+- cámaras públicas o privadas;
+- daños;
+- rastros o indicios visibles;
+- ubicación de elementos relevantes;
+- relación espacial entre lugar del hecho, lugar de aprehensión, secuestros y recorrido de fuga si corresponde.
+
+Redactá en estilo técnico policial, listo para copiar en el apartado de inspección ocular.
+"""
+
+
+def pedido_chatgpt_camara():
+    return """COPIAR Y PEGAR EN CHATGPT:
+
+Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito redactar una constancia sobre relevamiento de cámaras. No uses lenguaje de IA. Redactá en estilo policial.
+
+Debe contemplar:
+- si la cámara es pública o privada;
+- ubicación;
+- orientación;
+- qué sector enfoca;
+- si se advierte material de interés;
+- si se toma vista fotográfica;
+- si se filma con teléfono celular;
+- si se remite por WhatsApp a la comisaría preventora para resguardo.
+
+Entregá solo el texto final para copiar al acta o inspección ocular.
+"""
+
+
+def pedido_chatgpt_croquis():
+    return """COPIAR Y PEGAR EN CHATGPT:
+
+Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito redactar la descripción de un croquis demostrativo no a escala.
+
+Debe incluir:
+- flecha norte;
+- calles o arterias;
+- vereda, calzada y cordón si corresponde;
+- lugar del hecho;
+- lugar de aprehensión;
+- ubicación de víctima/testigo si corresponde;
+- ubicación de secuestros;
+- cámaras públicas o privadas;
+- dirección de fuga o recorrido;
+- referencias numeradas y leyenda.
+
+Redactá en estilo policial técnico, listo para copiar en la inspección ocular.
+"""
+
+
+# =====================================================
+# REDACCIÓN DEL ACTA
+# =====================================================
 
 def dependencia_texto(dependencia, dependencia_otro):
     return dependencia_otro.strip() if dependencia == "OTRO" and dependencia_otro.strip() else dependencia
@@ -280,15 +334,9 @@ def encabezado_institucional(data):
             f"G.T.M. — {unidad_regional}"
         )
 
-    if dependencia == "OTRO":
-        return (
-            "POLICÍA DE LA PROVINCIA DE SANTA FE\n"
-            f"{(dependencia_manual or 'DEPENDENCIA A CONSIGNAR').upper()} — {unidad_regional}"
-        )
-
     return (
         "POLICÍA DE LA PROVINCIA DE SANTA FE\n"
-        f"{dependencia.upper()} — {unidad_regional}"
+        f"{(dependencia_manual or 'DEPENDENCIA A CONSIGNAR').upper()} — {unidad_regional}"
     )
 
 
@@ -331,18 +379,23 @@ def generar_encabezado(data):
 
 
 def generar_cuerpo_hecho(data):
-    relato = limpiar_texto(data["relato"])
-    if not relato:
+    relato_final = limpiar_texto(data["relato_final_chatgpt"])
+    relato_base = limpiar_texto(data["relato"])
+
+    if relato_final:
+        return relato_final
+
+    if relato_base:
         return (
-            "Que en el día de la fecha, en circunstancias que deberán ser ampliadas por el personal actuante, "
-            "se deja constancia de la intervención policial motivada por un hecho comunicado a la dependencia, "
-            "quedando pendiente la ampliación circunstanciada del procedimiento."
+            "Que en el día de la fecha, en momentos en que personal actuante se encontraba en servicio, "
+            f"se toma conocimiento de un hecho ocurrido en {data['lugar_hecho'] or 'lugar a determinar'}, "
+            f"procediéndose a intervenir conforme las circunstancias que seguidamente se detallan: {relato_base}"
         )
 
     return (
-        "Que en el día de la fecha, en momentos en que personal actuante se encontraba en servicio, "
-        f"se toma conocimiento de un hecho ocurrido en {data['lugar_hecho'] or 'lugar a determinar'}, "
-        f"procediéndose a intervenir conforme las circunstancias que seguidamente se detallan: {relato}"
+        "Que en el día de la fecha, en circunstancias que deberán ser ampliadas por el personal actuante, "
+        "se deja constancia de la intervención policial motivada por un hecho comunicado a la dependencia, "
+        "quedando pendiente la ampliación circunstanciada del procedimiento."
     )
 
 
@@ -539,11 +592,7 @@ inicializar()
 
 st.title("🚔 Asistente de Actas en Flagrancia")
 st.caption("Creado por SubComisario CASTAÑEDA Juan")
-
-if ia_disponible():
-    st.success(f"IA activa: GEMINI_API_KEY detectada en Render. Modelo: {GEMINI_MODEL_NAME}")
-else:
-    st.warning("IA no activa: falta GEMINI_API_KEY en Render Environment.")
+st.success("Modo gratuito activo: sin IA paga, sin OpenAI, sin Gemini. Use ChatGPT manual para generar descripciones y pegue el resultado en la app.")
 
 tabs = st.tabs(["1. Encabezado", "2. Arrestado", "3. Inspección", "4. Cierre", "Vista final"])
 
@@ -588,31 +637,21 @@ with tabs[0]:
         "Ingrese o dicte lo ocurrido",
         placeholder=(
             "Relate brevemente qué ocurrió, dónde, cuándo y cómo intervino el personal policial. "
-            "El acta final lo incorporará como redacción corrida luego de SE HACE CONSTAR."
+            "Después puede preparar un pedido para ChatGPT y pegar aquí la redacción final."
         ),
         height=160,
     )
 
-    if st.button("Analizar relato con IA"):
-        prompt = f"""
-Analizá este relato policial y devolvé en formato claro:
-1. Hecho aparente.
-2. Lugar del hecho.
-3. Lugar de aprehensión.
-4. Si hay arrestados y cuántos.
-5. Si hay víctima.
-6. Si hay testigos.
-7. Si hay requisa.
-8. Si hay secuestros.
-9. Si hay cámaras.
-10. Motivo de flagrancia.
-11. Faltantes importantes.
-12. Propuesta de redacción policial corrida, sin poner título 'Relato del hecho' y empezando con 'Que...'.
+    with st.expander("Enviar relato a ChatGPT / preparar pedido", expanded=False):
+        st.link_button("Abrir ChatGPT", "https://chatgpt.com")
+        st.write("Copie el siguiente texto, péguelo en ChatGPT junto con el relato si corresponde, y luego pegue la respuesta en el campo de abajo.")
+        st.text_area("Pedido listo para copiar", pedido_chatgpt_relato(relato), height=260)
 
-Relato:
-{relato}
-"""
-        st.text_area("Resultado IA del relato", llamar_ia_texto(prompt), height=320)
+    relato_final_chatgpt = st.text_area(
+        "Pegar aquí la redacción devuelta por ChatGPT para incorporar al acta",
+        placeholder="Pegue aquí el texto que ChatGPT redactó empezando con 'Que...'. Si queda vacío, se usará el relato base.",
+        height=140,
+    )
 
     st.subheader("Víctima/s o damnificado/s")
     if st.button("Agregar víctima / damnificado"):
@@ -661,17 +700,6 @@ with tabs[1]:
 
             a["dictado"] = st.text_area("Dictado rápido opcional", value=a.get("dictado", ""), key=f"a_dic_{i}")
 
-            if st.button(f"Procesar dictado con IA - Arrestado {i+1}"):
-                prompt = f"""
-Separá este dictado en datos filiatorios:
-DNI, apodo, apellido, nombre, estado civil, fecha nacimiento, hijo de, profesión, domicilio, instrucción.
-Devolvé también una redacción policial breve de identificación.
-
-Dictado:
-{a['dictado']}
-"""
-                st.text_area(f"Resultado IA dictado arrestado {i+1}", llamar_ia_texto(prompt), height=240)
-
             c1, c2, c3 = st.columns(3)
             a["dni"] = c1.text_input("DNI", value=a.get("dni", ""), key=f"a_dni_{i}")
             a["apodo"] = c2.text_input("Apodo", value=a.get("apodo", ""), key=f"a_apodo_{i}")
@@ -697,26 +725,28 @@ Dictado:
                 horizontal=True,
             )
 
-            foto_arrestado = st.file_uploader(
-                "Foto del arrestado para descripción externa",
+            st.subheader("Foto / descripción externa")
+            st.file_uploader(
+                "Cargar foto del arrestado como respaldo",
                 type=["jpg", "jpeg", "png"],
                 key=f"foto_ar_{i}",
             )
 
-            if foto_arrestado and st.button(f"Describir arrestado con IA - {i+1}"):
-                prompt = """
-Generá una descripción policial breve y editable de vestimenta y aspecto externo visible.
-No identifiques a la persona.
-No describas lesiones.
-No digas 'en la imagen se observa'.
-Redacción directa para acta.
-"""
-                a["descripcion"] = llamar_ia_imagen(foto_arrestado, prompt)
+            with st.expander("Enviar foto de arrestado a ChatGPT / preparar pedido", expanded=False):
+                st.link_button("Abrir ChatGPT", "https://chatgpt.com")
+                st.write("Copie este pedido, péguelo en ChatGPT junto con la foto del arrestado, y luego pegue la respuesta en 'Descripción externa validada'.")
+                st.text_area(
+                    "Pedido listo para copiar",
+                    pedido_chatgpt_arrestado(persona(a)),
+                    height=220,
+                    key=f"pedido_ar_{i}",
+                )
 
             a["descripcion"] = st.text_area(
-                "Descripción externa validada",
+                "Descripción externa validada / respuesta de ChatGPT",
                 value=a.get("descripcion", ""),
                 key=f"a_desc_{i}",
+                placeholder="Pegue aquí la descripción devuelta por ChatGPT o cargue una descripción manual.",
             )
 
             st.subheader("Lesiones / asistencia médica")
@@ -746,9 +776,10 @@ Redacción directa para acta.
 
     with st.form("nuevo_secuestro"):
         vinculado = st.text_input("A quién pertenece / en poder de quién se halló")
-        tipo = st.selectbox("Tipo", ["Arma de fuego", "Arma blanca", "Dinero", "Teléfono celular", "Efectos personales", "Otro"])
+        tipo = st.selectbox("Tipo", TIPOS_SECUESTRO)
         caracter = st.selectbox("Carácter", ["Elemento de interés para la causa", "Depósito", "Pendiente"])
-        st.file_uploader("Foto del secuestro o panorámica de efectos", type=["jpg", "jpeg", "png"])
+        lugar_hallazgo = st.text_input("Lugar de hallazgo", placeholder="Ej: cintura, bolsillo, mochila, interior del vehículo")
+        st.file_uploader("Foto del secuestro o panorámica de efectos como respaldo", type=["jpg", "jpeg", "png"])
         texto_sec = st.text_area(
             "Redacción final del secuestro / depósito",
             placeholder=(
@@ -758,26 +789,37 @@ Redacción directa para acta.
             ),
         )
 
-        if st.form_submit_button("Agregar secuestro"):
+        submitted = st.form_submit_button("Agregar secuestro")
+        if submitted:
             st.session_state.secuestros.append(
                 {
                     "vinculado": vinculado,
                     "tipo": tipo,
                     "caracter": caracter,
+                    "lugar_hallazgo": lugar_hallazgo,
                     "texto": texto_sec,
                 }
             )
 
-    st.info("Para análisis IA de secuestro: cargue foto y use el generador debajo.")
-    foto_sec_ia = st.file_uploader("Foto para analizar secuestro con IA", type=["jpg", "jpeg", "png"], key="sec_ia")
-    if foto_sec_ia and st.button("Analizar secuestro con IA"):
-        prompt = """
-Describí técnicamente el elemento para acta policial.
-Si son efectos personales, redactá directo sin decir que proviene de foto.
-Sugerí si parece elemento de interés para la causa o depósito.
-No afirmes calibre, funcionamiento o aptitud si no es verificable.
-"""
-        st.text_area("Descripción IA secuestro", llamar_ia_imagen(foto_sec_ia, prompt), height=240)
+    with st.expander("Enviar foto de secuestro a ChatGPT / preparar pedido", expanded=False):
+        st.link_button("Abrir ChatGPT", "https://chatgpt.com")
+        st.write("Complete arriba tipo, vinculación, lugar de hallazgo y carácter. Luego copie este pedido y péguelo en ChatGPT junto con la foto.")
+        st.text_area(
+            "Pedido listo para copiar",
+            pedido_chatgpt_secuestro(
+                tipo if "tipo" in locals() else "",
+                vinculado if "vinculado" in locals() else "",
+                lugar_hallazgo if "lugar_hallazgo" in locals() else "",
+                caracter if "caracter" in locals() else "",
+            ),
+            height=300,
+        )
+
+    if st.session_state.secuestros:
+        st.subheader("Secuestros cargados")
+        for idx, s in enumerate(st.session_state.secuestros, start=1):
+            st.write(f"{idx}. {s.get('tipo','')} — {s.get('caracter','')} — {s.get('vinculado','')}")
+            st.caption(s.get("texto", ""))
 
 with tabs[2]:
     st.header("BLOQUE 3 — Inspección ocular, croquis y cámaras")
@@ -788,26 +830,22 @@ with tabs[2]:
     )
     st.warning("El protocolo requiere dejar constancia del relevamiento de cámaras o justificar su imposibilidad.")
 
-    descripcion_lugar = st.text_area("Descripción técnica del lugar", height=140)
+    st.subheader("Vistas fotográficas")
+    st.file_uploader("Vista 1 — Panorámica general", type=["jpg", "jpeg", "png"], key="v1")
+    st.file_uploader("Vista 2 — Media / relación", type=["jpg", "jpeg", "png"], key="v2")
+    st.file_uploader("Vista 3 — Detalle", type=["jpg", "jpeg", "png"], key="v3")
+    st.file_uploader("Vista 4 — Orientación / reconstrucción", type=["jpg", "jpeg", "png"], key="v4")
 
-    vista1 = st.file_uploader("Vista 1 — Panorámica general", type=["jpg", "jpeg", "png"], key="v1")
-    vista2 = st.file_uploader("Vista 2 — Media / relación", type=["jpg", "jpeg", "png"], key="v2")
-    vista3 = st.file_uploader("Vista 3 — Detalle", type=["jpg", "jpeg", "png"], key="v3")
-    vista4 = st.file_uploader("Vista 4 — Orientación / reconstrucción", type=["jpg", "jpeg", "png"], key="v4")
+    with st.expander("Enviar fotos a ChatGPT para inspección ocular / preparar pedido", expanded=False):
+        st.link_button("Abrir ChatGPT", "https://chatgpt.com")
+        st.write("Copie este pedido, péguelo en ChatGPT junto con las cuatro vistas fotográficas, y luego pegue la respuesta abajo.")
+        st.text_area("Pedido listo para copiar", pedido_chatgpt_inspeccion(), height=300)
 
-    if st.button("Generar descripción de inspección ocular con IA"):
-        fotos = [x for x in [vista1, vista2, vista3, vista4] if x]
-        if fotos:
-            prompt = """
-Generá una descripción técnica policial de inspección ocular con base en la vista aportada.
-Redactá como constatación del personal actuante.
-No digas 'en la imagen se observa'.
-Incluí lugar, accesos, iluminación, daños, rastros, cámaras, indicios y relación espacial si surge.
-"""
-            resultado = llamar_ia_imagen(fotos[0], prompt)
-            st.text_area("Descripción IA inspección", resultado, height=280)
-        else:
-            st.error("Cargue al menos una vista fotográfica.")
+    descripcion_lugar = st.text_area(
+        "Descripción técnica del lugar / respuesta de ChatGPT",
+        height=160,
+        placeholder="Pegue aquí la descripción técnica devuelta por ChatGPT o escriba manualmente.",
+    )
 
     camara_estado = st.selectbox(
         "Relevamiento de cámaras",
@@ -821,15 +859,23 @@ Incluí lugar, accesos, iluminación, daños, rastros, cámaras, indicios y rela
         ],
     )
 
+    with st.expander("Enviar relevamiento de cámaras a ChatGPT / preparar pedido", expanded=False):
+        st.link_button("Abrir ChatGPT", "https://chatgpt.com")
+        st.text_area("Pedido listo para copiar", pedido_chatgpt_camara(), height=260)
+
     nueva_constancia = st.text_area("Constancia de cámara / material de interés")
     if st.button("Agregar constancia de cámara"):
         st.session_state.camara_constancias.append(nueva_constancia)
 
+    with st.expander("Enviar datos de croquis a ChatGPT / preparar pedido", expanded=False):
+        st.link_button("Abrir ChatGPT", "https://chatgpt.com")
+        st.text_area("Pedido listo para copiar", pedido_chatgpt_croquis(), height=260)
+
     croquis = st.text_area(
-        "Croquis demostrativo",
+        "Croquis demostrativo / descripción",
         placeholder=(
-            "Describa croquis no a escala: flecha norte, calles, veredas, lugar del hecho, "
-            "aprehensión, secuestros, cámaras, dirección de fuga."
+            "Pegue aquí la descripción devuelta por ChatGPT o describa croquis no a escala: flecha norte, calles, "
+            "veredas, lugar del hecho, aprehensión, secuestros, cámaras, dirección de fuga."
         ),
         height=140,
     )
@@ -878,6 +924,7 @@ with tabs[4]:
         "lugar_hecho": lugar_hecho,
         "lugar_aprehension": lugar_aprehension,
         "relato": relato,
+        "relato_final_chatgpt": relato_final_chatgpt,
         "descripcion_lugar": descripcion_lugar,
         "camara_estado": camara_estado,
         "croquis": croquis,
