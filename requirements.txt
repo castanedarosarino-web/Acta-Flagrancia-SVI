@@ -2,3 +2,4 @@ streamlit
 openai
 pillow
 fpdf
+tornado>=6.4.2
