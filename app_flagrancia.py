@@ -55,7 +55,7 @@ tabs = st.tabs([
     "3. Victima", 
     "4. Testigo", 
     "5. Consulta", 
-    "6. Inspección", 
+    "6. Inspección Ocular", 
     "7. Secuestros", 
     "8. Cierre"
 ])
