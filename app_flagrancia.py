@@ -2,85 +2,95 @@ import streamlit as st
 from datetime import datetime
 
 # =====================================================
-# 1. CONFIGURACIÓN DE INTERFAZ (SVI PROFESIONAL)
+# 1. CONFIGURACIÓN Y ESTÉTICA (SVI PROFESIONAL)
 # =====================================================
-st.set_page_config(page_title="Consolidación SVI", layout="wide", page_icon="🚔")
+st.set_page_config(page_title="SVI - Gestión de Actas", layout="wide", page_icon="🚔")
 
-# CSS para estilización idéntica a la captura (minimalista y limpia)
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
     .stTextInput { margin-top: -15px; }
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
 # =====================================================
-# 2. PERSISTENCIA DE DATOS (PARA NO PERDER NADA)
+# 2. PERSISTENCIA DE DATOS
 # =====================================================
 if "data_operativa" not in st.session_state:
     st.session_state.data_operativa = {
         "nro_acta": "", "incidencia": "", "dependencia": "CRE PÉREZ",
-        "movil": "", "refuerzo": "", "l_hecho": "", "l_apre": ""
+        "movil": "", "refuerzo": "", "l_hecho": "", "l_apre": "", "relato": ""
     }
 
 # =====================================================
-# 3. SIDEBAR (CONSOLIDACIÓN SVI)
+# 3. SIDEBAR (CENTRAL DE RECEPCIÓN)
 # =====================================================
 with st.sidebar:
-    st.title("📂 Consolidación SVI")
+    st.title("📂 Central de Recepción")
     st.write(f"**Operador:** SubComisario Castañeda Juan")
     
     st.divider()
-    st.subheader("Subir datos del móvil")
-    st.file_uploader("Upload", type=["json"], help="Carga de datos SVI previos")
+    st.subheader("Importar JSON")
+    st.file_uploader("Upload", type=["json"], help="200MB per file • JSON")
     
     st.divider()
-    if st.button("🗑️ Limpiar Todo"):
-        for key in st.session_state.keys():
-            del st.session_state[key]
-        st.rerun()
+    # TU AUTORÍA (Directiva de diseño inamovible)
+    st.write("---")
+    st.caption("🚀 Sistema SVI")
+    st.info("**Creado por: SubComisario Castañeda Juan**") # Tu autoría blindada
+    
+    if st.button("💾 GUARDAR ACTA (JSON)"):
+        st.toast("Preparando descarga de acta...")
 
 # =====================================================
-# 4. CUERPO PRINCIPAL - BLOQUE 1 PERFECTO
+# 4. BLOQUE 1: INICIO (DATOS BASE)
 # =====================================================
-st.title("🚓 SVI - Sistema de Identificación y Sumarios")
+st.title("🚔 SVI - Sistema de Gestión de Actas")
 
-# Pestañas respetando el diseño de la captura original
-tabs = st.tabs(["1. Inicio (Operativo)", "2. Filiación (Legal)", "3. Inspección", "4. Secuestros", "5. Cierre e IA"])
+tabs = st.tabs(["1. Inicio (Datos Base)", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre"])
 
 with tabs[0]:
-    st.subheader("🛡️ Identificación del Procedimiento")
+    st.subheader("🛡️ Identificación Administrativa y Operativa")
     
-    # FILA 1: Identificadores técnicos
-    c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"], placeholder="Ej: 154/2026")
-    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
+    # FILA 1
+    c1, c2, c3, c4 = st.columns(4)
+    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"], placeholder="Ej: 154/26")
+    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"], placeholder="Ej: 2026-00123")
     dep = c3.selectbox("Dependencia", ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M."], index=0)
-    n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"])
+    n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"], placeholder="Ej: 9845")
 
-    # FILA 2: Personal y Apoyo
-    st.write("") # Espaciador
+    # FILA 2
+    st.write("") 
     personal_fijo = st.text_input("Personal Actuante", value="SubComisario Castañeda Juan", disabled=True)
-    refuerzos = st.text_input("Refuerzo (Móviles/Personal en apoyo)", value=st.session_state.data_operativa["refuerzo"])
+    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa["refuerzo"])
 
-    # FILA 3: Tiempo y Espacio (📍 Esencia del procedimiento)
+    # FILA 3: TIEMPO
     c5, c6 = st.columns(2)
     fecha_proc = c5.date_input("Fecha", value=datetime.now())
     hora_proc = c6.time_input("Hora", value=datetime.now())
 
-    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa["l_hecho"])
-    lugar_apre = st.text_input("👮 Lugar de Aprehensión", value=st.session_state.data_operativa["l_apre"])
+    # FILA 4: ESPACIO
+    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa["l_hecho"], placeholder="Calle y Nro / Intersección")
+    lugar_apre = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa["l_apre"], placeholder="Si difiere del lugar del hecho")
 
-    # Guardado automático en el estado de la sesión
+    st.divider()
+    
+    # RELATO CIRCUNSTANCIADO (Agregado según tu nueva imagen)
+    st.subheader("📝 Relato Circunstanciado")
+    relato = st.text_area("Narración cronológica y detallada:", 
+                          value=st.session_state.data_operativa["relato"],
+                          placeholder="A la hora indicada, cumplimentando directivas de la Central 911...",
+                          height=200)
+
+    # Actualización del estado
     st.session_state.data_operativa.update({
         "nro_acta": n_acta, "incidencia": n_incidencia, "dependencia": dep,
-        "movil": n_movil, "refuerzo": refuerzos, "l_hecho": lugar_hecho, "l_apre": lugar_apre
+        "movil": n_movil, "refuerzo": refuerzos, "l_hecho": lugar_hecho, 
+        "l_apre": lugar_apre, "relato": relato
     })
 
-# =====================================================
-# CONTINUIDAD: LAS DEMÁS PESTAÑAS QUEDAN LISTAS PARA CARGAR
-# =====================================================
-with tabs[1]: st.info("Esperando directivas para Filiación (Legal)...")
-with tabs[2]: st.info("Bloque de Inspección...")
-with tabs[3]: st.info("Bloque de Secuestros...")
-with tabs[4]: st.info("Generador de Cierre e IA...")
+# Pestañas siguientes listas para directivas
+with tabs[1]: st.info("Módulo de Filiación en espera...")
