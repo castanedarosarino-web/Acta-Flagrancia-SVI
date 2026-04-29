@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, date
 import json
+import base64
 
 # =====================================================
 # 1. SEGURIDAD Y CONFIGURACIÓN
@@ -42,43 +43,50 @@ with st.sidebar:
     
     if archivos:
         for a in archivos:
-            d = json.load(a)
-            if d.get("cup") != st.session_state.cup:
-                st.error(f"❌ CUP Diferente: {a.name}")
-                continue
-            
-            with st.expander(f"📥 De: {a.name}", expanded=True):
-                if st.button(f"Sumar Filiaciones/Objetos", key=f"sum_{a.name}"):
-                    st.session_state.victimas.extend(d.get("victimas", []))
-                    st.session_state.testigos.extend(d.get("testigos", []))
-                    st.session_state.arrestados.extend(d.get("arrestados", []))
-                    st.session_state.secuestros.extend(d.get("secuestros", []))
-                    st.rerun()
-
-                if d.get("relato_base") and d.get("relato_base") != st.session_state.relato_base:
-                    if st.button("📥 Importar Noticia Criminal", key=f"rel_{a.name}"):
-                        st.session_state.relato_base = d.get("relato_base")
-                        st.rerun()
+            try:
+                d = json.load(a)
+                if d.get("cup") != st.session_state.cup:
+                    st.error(f"❌ CUP Diferente: {a.name}")
+                    continue
                 
-                if d.get("directivas_fiscal") and d.get("directivas_fiscal") != st.session_state.directivas_fiscal:
-                    if st.button("📥 Importar Consulta Fiscal", key=f"dir_{a.name}"):
-                        st.session_state.directivas_fiscal = d.get("directivas_fiscal")
-                        st.session_state.fiscal_turno = d.get("fiscal_turno")
+                with st.expander(f"📥 De: {a.name}", expanded=True):
+                    if st.button(f"Sumar Filiaciones/Objetos", key=f"sum_{a.name}"):
+                        st.session_state.victimas.extend(d.get("victimas", []))
+                        st.session_state.testigos.extend(d.get("testigos", []))
+                        st.session_state.arrestados.extend(d.get("arrestados", []))
+                        st.session_state.secuestros.extend(d.get("secuestros", []))
                         st.rerun()
+
+                    if d.get("relato_base") and d.get("relato_base") != st.session_state.relato_base:
+                        if st.button("📥 Importar Relato", key=f"rel_{a.name}"):
+                            st.session_state.relato_base = d.get("relato_base")
+                            st.rerun()
+            except:
+                st.error("Archivo corrupto")
 
     st.divider()
-    # Función de respaldo
-    respaldo = {
+    
+    # --- PARCHE DE DESCARGA SEGURA ---
+    datos_finales = {
         "cup": st.session_state.cup, "relato_base": st.session_state.relato_base,
         "victimas": st.session_state.victimas, "testigos": st.session_state.testigos,
         "arrestados": st.session_state.arrestados, "secuestros": st.session_state.secuestros,
         "inspeccion_ocular": st.session_state.inspeccion_ocular,
         "fiscal_turno": st.session_state.fiscal_turno, "directivas_fiscal": st.session_state.directivas_fiscal
     }
-    st.download_button("💾 Guardar Todo", data=json.dumps(respaldo, indent=4), file_name=f"SVI_{st.session_state.cup}.json")
+    
+    json_string = json.dumps(datos_finales, indent=4)
+    # Creamos un botón de descarga más robusto
+    st.download_button(
+        label="💾 Guardar Todo (PC)",
+        data=json_string,
+        file_name=f"SVI_{st.session_state.cup if st.session_state.cup else 'BORRADOR'}.json",
+        mime="application/json",
+        key="download_btn_main"
+    )
 
 # =====================================================
-# 3. INTERFAZ PRINCIPAL
+# 3. INTERFAZ PRINCIPAL (TABS)
 # =====================================================
 st.title("🚔 SVI - Consolidación de Sumarios")
 t1, t2, t3, t4, t5 = st.tabs(["1. Inicio", "2. Filiación Completa", "3. Inspección Ocular", "4. Secuestros", "5. Final e IA"])
@@ -88,7 +96,7 @@ with t1:
     col_a, col_b, col_c, col_d = st.columns([1, 2, 1, 1])
     ur = col_a.selectbox("U. Regional", ["UR II", "UR IV", "UR XVII", "UR I"])
     dep = col_b.selectbox("Dependencia", ["CRE PÉREZ", "CRE ROSARIO", "COMISARÍA 22", "SUB 18", "OTRO"])
-    acta = col_c.text_input("Acta N°")
+    acta = col_c.text_input("Acta N°", placeholder="Nro")
     anio = col_d.text_input("Año", value="2026")
     
     if acta:
@@ -155,19 +163,10 @@ with t5:
     st.session_state.directivas_fiscal = st.text_area("Directivas impartidas por el Magistrado", value=st.session_state.directivas_fiscal)
     
     if st.button("🚀 PREPARAR ACTA FINAL PARA IA"):
-        # Construcción del paquete completo para la IA
-        paquete = f"AUTOR: SubComisario Castañeda Juan\n"
-        paquete += f"ACTA: {st.session_state.cup}\n"
-        paquete += f"HECHO: {st.session_state.relato_base}\n\n"
-        
-        paquete += "--- FILIACIONES ---\n"
+        paquete = f"AUTOR: SubComisario Castañeda Juan\nACTA: {st.session_state.cup}\nHECHO: {st.session_state.relato_base}\n\n"
         for lista, nombre in [(st.session_state.victimas, "VICTIMAS"), (st.session_state.testigos, "TESTIGOS"), (st.session_state.arrestados, "ARRESTADOS")]:
-            paquete += f"\n[{nombre}]:\n"
+            paquete += f"[{nombre}]:\n"
             for p in lista:
-                paquete += f"- {p['apellido'].upper()}, {p['nombre']}. DNI: {p['dni']}. Domicilio: {p['domicilio']}. Dijo: {p['manifiesta']}\n"
-        
-        paquete += f"\n--- INSPECCIÓN ---\n{st.session_state.inspeccion_ocular}\n"
-        paquete += f"\n--- CONSULTA FISCAL ---\nFiscal: {st.session_state.fiscal_turno}\nDirectivas: {st.session_state.directivas_fiscal}"
-        
+                paquete += f"- {p['apellido'].upper()}, {p['nombre']}. DNI: {p['dni']}. Dijo: {p['manifiesta']}\n"
         st.success("✅ Paquete de datos consolidado.")
-        st.text_area("Copiar este bloque y pegarlo en Gémini/ChatGPT para el pulido final:", paquete, height=400)
+        st.text_area("Copiar este bloque:", paquete, height=400)
