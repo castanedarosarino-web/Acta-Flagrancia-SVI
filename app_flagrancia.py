@@ -30,8 +30,8 @@ if "data_operativa" not in st.session_state:
 # =====================================================
 with st.sidebar:
     st.title("📂 Central de Recepción")
-    # DIRECTIVA: AUTORÍA EN SIDEBAR
-    st.write("**Creado por Sub Comisario CASTAÑEDA Juan**")
+    # CORRECCIÓN: Autoria en el sidebar sin la palabra 'Operador'
+    st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
     
     st.divider()
     st.subheader("Importar JSON")
@@ -39,13 +39,13 @@ with st.sidebar:
     
     st.divider()
     if st.button("💾 GUARDAR ACTA (JSON)"):
-        st.toast("Guardando acta...")
+        st.toast("Guardando...")
 
 # =====================================================
 # 4. CUERPO PRINCIPAL - BLOQUE 1
 # =====================================================
-# DIRECTIVA: CAMBIO DE TÍTULO Y AUTORÍA DEBAJO
-st.title("🚓 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
+# CORRECCIÓN: Título y Autoria exactamente donde indicaste
+st.title("🚔 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
 st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
 
 tabs = st.tabs(["1. Inicio (Datos Base)", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre"])
