@@ -60,7 +60,7 @@ with st.sidebar:
                 if k in mapa:
                     st.session_state.data_operativa[mapa[k]] = v
                 else:
-                    st.session_state.data_operativa[k] = v
+                st.session_state.data_operativa[k] = v
 
             st.success("✅ Datos del móvil integrados.")
 
