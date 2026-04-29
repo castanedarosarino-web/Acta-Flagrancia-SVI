@@ -4,7 +4,7 @@ from datetime import datetime
 # =====================================================
 # 1. CONFIGURACIÓN Y ESTÉTICA (SVI PROFESIONAL)
 # =====================================================
-st.set_page_config(page_title="SVI - Gestión de Actas", layout="wide", page_icon="🚔")
+st.set_page_config(page_title="SVI - Acta de Procedimiento", layout="wide", page_icon="🚔")
 
 st.markdown("""
     <style>
@@ -30,25 +30,23 @@ if "data_operativa" not in st.session_state:
 # =====================================================
 with st.sidebar:
     st.title("📂 Central de Recepción")
-    st.write(f"**Operador:** SubComisario Castañeda Juan")
+    # DIRECTIVA: AUTORÍA EN SIDEBAR
+    st.write("**Creado por Sub Comisario CASTAÑEDA Juan**")
     
     st.divider()
     st.subheader("Importar JSON")
     st.file_uploader("Upload", type=["json"], help="200MB per file • JSON")
     
     st.divider()
-    # TU AUTORÍA (Directiva de diseño inamovible)
-    st.write("---")
-    st.caption("🚀 Sistema SVI")
-    st.info("**Creado por: SubComisario Castañeda Juan**") # Tu autoría blindada
-    
     if st.button("💾 GUARDAR ACTA (JSON)"):
-        st.toast("Preparando descarga de acta...")
+        st.toast("Guardando acta...")
 
 # =====================================================
-# 4. BLOQUE 1: INICIO (DATOS BASE)
+# 4. CUERPO PRINCIPAL - BLOQUE 1
 # =====================================================
-st.title("🚔 SVI - Sistema de Gestión de Actas")
+# DIRECTIVA: CAMBIO DE TÍTULO Y AUTORÍA DEBAJO
+st.title("🚓 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
+st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
 
 tabs = st.tabs(["1. Inicio (Datos Base)", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre"])
 
@@ -64,7 +62,7 @@ with tabs[0]:
 
     # FILA 2
     st.write("") 
-    personal_fijo = st.text_input("Personal Actuante", value="SubComisario Castañeda Juan", disabled=True)
+    personal_actuante = st.text_input("Personal Actuante", value="Sub Comisario CASTAÑEDA Juan", disabled=True)
     refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa["refuerzo"])
 
     # FILA 3: TIEMPO
@@ -78,7 +76,7 @@ with tabs[0]:
 
     st.divider()
     
-    # RELATO CIRCUNSTANCIADO (Agregado según tu nueva imagen)
+    # RELATO CIRCUNSTANCIADO
     st.subheader("📝 Relato Circunstanciado")
     relato = st.text_area("Narración cronológica y detallada:", 
                           value=st.session_state.data_operativa["relato"],
@@ -91,6 +89,3 @@ with tabs[0]:
         "movil": n_movil, "refuerzo": refuerzos, "l_hecho": lugar_hecho, 
         "l_apre": lugar_apre, "relato": relato
     })
-
-# Pestañas siguientes listas para directivas
-with tabs[1]: st.info("Módulo de Filiación en espera...")
