@@ -50,8 +50,17 @@ with st.sidebar:
         try:
             datos_nuevos = json.loads(archivo_subido.getvalue().decode("utf-8"))
 
-            # Actualizamos TODO el diccionario de una vez
-            st.session_state.data_operativa.update(datos_nuevos)
+            mapa = {
+                "lugar_aprehension": "l_apre",
+                "lugar_hecho": "l_hecho",
+                "relato_hechos": "relato"
+            }
+
+            for k, v in datos_nuevos.items():
+                if k in mapa:
+                    st.session_state.data_operativa[mapa[k]] = v
+                else:
+                    st.session_state.data_operativa[k] = v
 
             st.success("✅ Datos del móvil integrados.")
 
