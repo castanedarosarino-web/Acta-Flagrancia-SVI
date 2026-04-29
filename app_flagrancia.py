@@ -2,9 +2,6 @@ import streamlit as st
 import json
 from datetime import datetime
 
-# =====================================================
-# 1. CONFIGURACIÓN Y ESTÉTICA (SVI PROFESIONAL)
-# =====================================================
 st.set_page_config(page_title="SVI - Acta de Procedimiento", layout="wide", page_icon="🚔")
 
 st.markdown("""
@@ -17,9 +14,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# =====================================================
-# 2. PERSISTENCIA DE DATOS (DICCIONARIO COMPLETO)
-# =====================================================
 if "data_operativa" not in st.session_state:
     st.session_state.data_operativa = {
         "nro_acta": "",
@@ -34,9 +28,70 @@ if "data_operativa" not in st.session_state:
         "personal": "Sub Comisario CASTAÑEDA Juan"
     }
 
-# =====================================================
-# 3. SIDEBAR (CENTRAL DE RECEPCIÓN)
-# =====================================================
+def normalizar_clave(clave):
+    return str(clave).strip().lower().replace("_", " ").replace("-", " ")
+
+def aplanar_json(data, salida=None):
+    if salida is None:
+        salida = {}
+
+    if isinstance(data, dict):
+        for k, v in data.items():
+            salida[normalizar_clave(k)] = v
+            if isinstance(v, (dict, list)):
+                aplanar_json(v, salida)
+
+    elif isinstance(data, list):
+        for item in data:
+            aplanar_json(item, salida)
+
+    return salida
+
+def cargar_datos_json(datos):
+    plano = aplanar_json(datos)
+
+    campos = {
+        "nro_acta": [
+            "nro acta", "numero acta", "número acta", "acta"
+        ],
+        "incidencia": [
+            "incidencia", "nro incidencia", "numero incidencia", "número incidencia", "911"
+        ],
+        "dependencia": [
+            "dependencia", "unidad", "cre"
+        ],
+        "movil": [
+            "movil", "móvil", "nro movil", "nro móvil", "numero movil", "número móvil"
+        ],
+        "refuerzo": [
+            "refuerzo", "apoyo", "moviles apoyo", "móviles apoyo"
+        ],
+        "l_hecho": [
+            "l hecho", "lugar hecho", "lugar del hecho", "domicilio hecho"
+        ],
+        "l_apre": [
+            "l apre", "lugar apre", "lugar aprehension", "lugar aprehensión",
+            "lugar de aprehension", "lugar de aprehensión", "domicilio aprehension"
+        ],
+        "relato": [
+            "relato", "relato hechos", "relato de los hechos",
+            "narracion", "narración", "narracion de los hechos",
+            "narración de los hechos", "hechos", "descripcion",
+            "descripción", "circunstancias", "procedimiento",
+            "texto", "detalle", "observaciones"
+        ],
+        "personal": [
+            "personal", "personal actuante", "actuante"
+        ]
+    }
+
+    for destino, variantes in campos.items():
+        for variante in variantes:
+            clave_normal = normalizar_clave(variante)
+            if clave_normal in plano and plano[clave_normal] not in [None, ""]:
+                st.session_state.data_operativa[destino] = str(plano[clave_normal])
+                break
+
 with st.sidebar:
     st.title("📂 Central de Recepción")
     st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
@@ -48,40 +103,11 @@ with st.sidebar:
     if archivo_subido is not None:
         try:
             datos_nuevos = json.loads(archivo_subido.getvalue().decode("utf-8"))
-
-            mapa = {
-                "lugar_aprehension": "l_apre",
-                "lugar de aprehension": "l_apre",
-                "lugar de aprehensión": "l_apre",
-                "l_apre": "l_apre",
-
-                "lugar_hecho": "l_hecho",
-                "lugar del hecho": "l_hecho",
-                "l_hecho": "l_hecho",
-
-                "relato_hechos": "relato",
-                "relato de los hechos": "relato",
-                "narracion de los hechos": "relato",
-                "narración de los hechos": "relato",
-                "narracion": "relato",
-                "narración": "relato",
-                "narrativa": "relato",
-                "hechos": "relato",
-                "descripcion": "relato",
-                "descripción": "relato",
-                "relato_usuario": "relato",
-                "relato": "relato"
-            }
-
-            for k, v in datos_nuevos.items():
-                clave = str(k).strip().lower()
-
-                if clave in mapa:
-                    st.session_state.data_operativa[mapa[clave]] = v
-                else:
-                    st.session_state.data_operativa[k] = v
-
+            cargar_datos_json(datos_nuevos)
             st.success("✅ Datos del móvil integrados.")
+
+            with st.expander("🔍 Ver claves detectadas del JSON"):
+                st.json(aplanar_json(datos_nuevos))
 
         except Exception as e:
             st.error(f"Error al cargar: {e}")
@@ -98,9 +124,6 @@ with st.sidebar:
         use_container_width=True
     )
 
-# =====================================================
-# 4. CUERPO PRINCIPAL - BLOQUE 1
-# =====================================================
 st.title("🚔 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
 st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
 
@@ -120,78 +143,31 @@ with tabs[0]:
 
     c1, c2, c3, c4 = st.columns(4)
 
-    n_acta = c1.text_input(
-        "Nro. de Acta",
-        value=st.session_state.data_operativa["nro_acta"]
-    )
-
-    n_incidencia = c2.text_input(
-        "Nro. Incidencia (911)",
-        value=st.session_state.data_operativa["incidencia"]
-    )
+    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"])
+    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
 
     dep_opciones = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
     dep_actual = st.session_state.data_operativa.get("dependencia", "CRE PÉREZ")
     idx_dep = dep_opciones.index(dep_actual) if dep_actual in dep_opciones else 0
 
-    dep = c3.selectbox(
-        "Dependencia",
-        dep_opciones,
-        index=idx_dep
-    )
+    dep = c3.selectbox("Dependencia", dep_opciones, index=idx_dep)
 
     if dep == "OTRO":
-        dep_otra = c4.text_input(
-            "Especifique Dependencia",
-            value=st.session_state.data_operativa.get("dependencia_otra", "")
-        )
-
-        n_movil = st.text_input(
-            "Nro. de Móvil",
-            value=st.session_state.data_operativa.get("movil", "")
-        )
+        dep_otra = c4.text_input("Especifique Dependencia", value=st.session_state.data_operativa.get("dependencia_otra", ""))
+        n_movil = st.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
     else:
-        n_movil = c4.text_input(
-            "Nro. de Móvil",
-            value=st.session_state.data_operativa.get("movil", "")
-        )
-
+        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
         dep_otra = ""
 
-    personal_actuante = st.text_input(
-        "Personal Actuante",
-        value=st.session_state.data_operativa.get(
-            "personal",
-            "Sub Comisario CASTAÑEDA Juan"
-        )
-    )
-
-    refuerzos = st.text_input(
-        "Refuerzo (Móviles/Personal de apoyo)",
-        value=st.session_state.data_operativa.get("refuerzo", "")
-    )
+    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa.get("personal", "Sub Comisario CASTAÑEDA Juan"))
+    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa.get("refuerzo", ""))
 
     c5, c6 = st.columns(2)
+    fecha_proc = c5.date_input("Fecha", value=datetime.now())
+    hora_proc = c6.time_input("Hora", value=datetime.now())
 
-    fecha_proc = c5.date_input(
-        "Fecha",
-        value=datetime.now()
-    )
-
-    hora_proc = c6.time_input(
-        "Hora",
-        value=datetime.now()
-    )
-
-    lugar_hecho = st.text_input(
-        "📍 Lugar del Hecho",
-        value=st.session_state.data_operativa.get("l_hecho", "")
-    )
-
-    lugar_apre = st.text_input(
-        "👤 Lugar de Aprehensión",
-        value=st.session_state.data_operativa.get("l_apre", "")
-    )
+    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa.get("l_hecho", ""))
+    lugar_apre = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa.get("l_apre", ""))
 
     st.divider()
     st.subheader("📝 Relato Circunstanciado")
@@ -211,7 +187,6 @@ Empezá con "Que..." y mantené una redacción clara y formal. \n\n{relato_usuar
             f"<script>navigator.clipboard.writeText(`{prompt_ia}`);</script>",
             height=0
         )
-
         st.success("✅ Copiado al portapapeles.")
 
     st.session_state.data_operativa.update({
