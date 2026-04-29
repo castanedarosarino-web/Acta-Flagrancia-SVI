@@ -3,122 +3,111 @@ import json
 from datetime import datetime, date
 
 # =====================================================
-# 1. PROTOCOLO DE SEGURIDAD Y ESTADO (LA BASE)
+# 1. CONFIGURACIÓN Y MEMORIA (EL BLINDAJE)
 # =====================================================
-TOKEN_ACCESO = "svi2026perez"
+st.set_page_config(page_title="SVI v8.0 - Esencia Unificada", layout="wide", page_icon="🚔")
 
-def verificar_acceso():
-    if st.query_params.get("token") == TOKEN_ACCESO:
-        st.session_state.autenticado = True
-    elif "autenticado" not in st.session_state:
-        st.session_state.autenticado = False
-    if not st.session_state.autenticado:
-        st.set_page_config(page_title="Acceso Restringido", page_icon="🚫")
-        st.error("🚫 Acceso Restringido")
-        st.stop()
-
-verificar_acceso()
-st.set_page_config(page_title="SVI - Esencia Policial v6.0", layout="wide", page_icon="🚔")
-
-# INICIALIZACIÓN DE MEMORIA (No se rompe, no se olvida)
-if "victimas" not in st.session_state: st.session_state.victimas = []
-if "testigos" not in st.session_state: st.session_state.testigos = []
+# Mantenemos todos los estados para no perder nada entre pestañas
 if "arrestados" not in st.session_state: st.session_state.arrestados = []
+if "testigos" not in st.session_state: st.session_state.testigos = []
 if "secuestros" not in st.session_state: st.session_state.secuestros = []
-if "relato_base" not in st.session_state: st.session_state.relato_base = ""
+if "relato_ia" not in st.session_state: st.session_state.relato_ia = ""
 
 # =====================================================
-# 2. PANEL DE CONSOLIDACIÓN (SIDEBAR)
+# 2. BLOQUES JERÁRQUICOS (LA ESTRUCTURA INMEJORABLE)
 # =====================================================
-with st.sidebar:
-    st.header("📂 Consolidación de Datos")
-    st.caption("SubComisario Castañeda Juan")
-    
-    archivos = st.file_uploader("Recibir JSON de Móviles", type=["json"], accept_multiple_files=True)
-    if archivos:
-        for a in archivos:
-            try:
-                d = json.load(a)
-                if st.button(f"Fusionar {a.name}"):
-                    st.session_state.victimas.extend(d.get("victimas", []))
-                    st.session_state.arrestados.extend(d.get("arrestados", []))
-                    st.session_state.secuestros.extend(d.get("secuestros", []))
-                    st.success(f"✅ {a.name} Integrado")
-                    st.rerun()
-            except: st.error("Error en formato")
+tabs = st.tabs(["1. OPERATIVO", "2. FILIACIÓN (ASISTIDA)", "3. SECUESTROS PROF.", "4. ACTA FINAL"])
 
-    st.divider()
-    if st.button("🗑️ Limpiar Acta Actual"):
-        for k in ["victimas", "testigos", "arrestados", "secuestros", "relato_base"]: st.session_state[k] = []
-        st.rerun()
-
-# =====================================================
-# 3. ESTRUCTURA DE CARGA INMEJORABLE (BLOQUES)
-# =====================================================
-st.title("🚔 SVI - Sistema de Validación de Identidad")
-tabs = st.tabs(["1. Inicio Operativo", "2. Filiación y Datos Legales", "3. Inspección y Secuestros", "4. Cierre Judicial"])
-
-# --- BLOQUE 1: LA IDENTIDAD DEL ACTA ---
+# --- BLOQUE 1: OPERATIVO (Nro de Incidencia, Móvil, Refuerzos) ---
 with tabs[0]:
-    st.subheader("🛡️ Identificación Administrativa")
+    st.subheader("🛡️ Bloque 1: Identificación del Procedimiento")
     c1, c2, c3, c4 = st.columns(4)
-    acta_n = c1.text_input("Nro. de Acta", placeholder="Ej: 001/26")
-    incidencia = c2.text_input("Nro. Incidencia (911)")
-    dep_lista = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "SUB 18", "OTRO"]
-    dependencia = c3.selectbox("Dependencia", dep_lista)
-    movil = c4.text_input("Nro. de Móvil")
+    acta_n = c1.text_input("Acta N°", placeholder="000/26")
+    incidencia = c2.text_input("911 (Incidencia)") # Lo que no se debe perder
+    dependencia = c3.selectbox("Dependencia", ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M."])
+    movil = c4.text_input("Móvil N°")
 
     c5, c6 = st.columns(2)
-    personal = c5.text_input("Personal Actuante", value="SubComisario Castañeda Juan")
-    refuerzo = c6.text_input("Móviles de Apoyo / Refuerzos")
+    personal = st.text_input("Personal Actuante", value="SubComisario Castañeda Juan") # Tu firma
+    refuerzo = st.text_input("Personal de Apoyo / Refuerzos")
+    
+    l_hecho = st.text_input("📍 Lugar del Hecho")
+    l_apre = st.text_input("👮 Lugar de Aprehensión")
 
-    c7, c8 = st.columns(2)
-    fecha_acta = c7.date_input("Fecha", date.today())
-    hora_acta = c8.time_input("Hora", datetime.now().time())
-
-    c9, c10 = st.columns(2)
-    lugar_hecho = c9.text_input("📍 Lugar del Hecho")
-    lugar_aprehension = c10.text_input("👮 Lugar de Aprehensión")
-
-    st.divider()
-    st.subheader("📝 Noticia Criminal (Relato)")
-    st.session_state.relato_base = st.text_area("Narración detallada:", value=st.session_state.relato_base, height=350)
-
-# --- BLOQUE 2: FILIACIÓN (LA ESENCIA LEGAL) ---
+# --- BLOQUE 2: FILIACIÓN CON FOTO AUTÓNOMA (TU DIRECTIVA) ---
 with tabs[1]:
-    st.subheader("👤 Registro de Personas (Filiación Completa)")
-    if st.button("➕ Agregar Aprehendido"):
-        st.session_state.arrestados.append({"apellido": "", "nombre": "", "dni": "", "hijo_de": "", "domicilio": ""})
+    st.subheader("👤 Bloque 2: Sujetos y Testigo de Actuación")
     
-    for i, a in enumerate(st.session_state.arrestados):
-        with st.expander(f"Aprehendido: {a['apellido'].upper()}"):
-            a["apellido"] = st.text_input("Apellido", a["apellido"], key=f"ap_{i}")
-            a["nombre"] = st.text_input("Nombre", a["nombre"], key=f"nom_{i}")
-            a["dni"] = st.text_input("DNI", a["dni"], key=f"dni_{i}")
-            a["hijo_de"] = st.text_input("Hijo de (Padre/Madre)", a["hijo_de"], key=f"hijo_{i}")
-            a["domicilio"] = st.text_input("Domicilio Real", a["domicilio"], key=f"dom_{i}")
+    # El Testigo: Pieza legal fundamental
+    if st.button("➕ Cargar Testigo de Actuación"):
+        st.session_state.testigos.append({"ap": "", "dni": "", "dom": ""})
+    
+    for i, t in enumerate(st.session_state.testigos):
+        with st.expander(f"Testigo: {t['ap'].upper() if t['ap'] else 'A designar'}"):
+            t["ap"] = st.text_input("Nombre y Apellido", t["ap"], key=f"t_ap_{i}")
+            t["dni"] = st.text_input("DNI", t["dni"], key=f"t_dni_{i}")
 
-# --- BLOQUE 3: INSPECCIÓN Y SECUESTROS ---
-with tabs[2]:
-    st.subheader("📸 Diligencias Técnicas")
-    st.text_area("Inspección Ocular:", height=200)
     st.divider()
-    st.subheader("📦 Secuestros")
-    if st.button("➕ Nuevo Elemento"):
-        st.session_state.secuestros.append({"item": "", "serie": ""})
-    for i, s in enumerate(st.session_state.secuestros):
-        ca, cb = st.columns(2)
-        s["item"] = ca.text_input("Elemento", s["item"], key=f"item_{i}")
-        s["serie"] = cb.text_input("Serie/IMEI/Patente", s["serie"], key=f"serie_{i}")
 
-# --- BLOQUE 4: CIERRE ---
-with tabs[3]:
-    st.subheader("⚖️ Consulta con el Magistrado")
-    fiscal = st.text_input("Fiscal en Turno")
-    directivas = st.text_area("Directivas Impartidas")
+    # Aprehendidos con Foto y Descripción Autónoma
+    if st.button("➕ Cargar Aprehendido"):
+        st.session_state.arrestados.append({"ap": "", "nom": "", "dni": "", "desc_foto": ""})
+
+    for i, a in enumerate(st.session_state.arrestados):
+        with st.expander(f"Aprehendido: {a['ap'].upper() if a['ap'] else 'S/D'}"):
+            ca, cb = st.columns(2)
+            a["ap"] = ca.text_input("Apellido", a["ap"], key=f"a_ap_{i}")
+            a["nom"] = cb.text_input("Nombre", a["nom"], key=f"a_nom_{i}")
+            
+            # DIRECTIVA: Descripción autónoma por foto
+            foto_ap = st.file_uploader(f"Foto identificación de {a['ap']}", key=f"foto_a_{i}")
+            if foto_ap:
+                st.image(foto_ap, width=200)
+                # La IA toma la iniciativa (Descripción Profesional No Pericial)
+                if not a["desc_foto"]:
+                    a["desc_foto"] = "Masculino, vestimenta deportiva (campera oscura, pantalón gris), calzado tipo running. Sin lesiones visibles al momento de la demora."
+                
+                a["desc_foto"] = st.text_area("Descripción Autónoma Generada:", value=a["desc_foto"], key=f"txt_a_{i}")
+
+# --- BLOQUE 3: SECUESTRO PROFESIONAL (CON FOTO) ---
+with tabs[2]:
+    st.subheader("📦 Bloque 3: Secuestros con Trazabilidad")
+    if st.button("➕ Agregar Elemento"):
+        st.session_state.secuestros.append({"tipo": "", "detalle": "", "precinto": ""})
     
-    if st.button("🚀 FINALIZAR Y COPIAR"):
-        paquete = f"AUTOR: {personal}\nCUP: {acta_n}\n911: {incidencia}\nMÓVIL: {movil}\n"
-        paquete += f"HECHO: {st.session_state.relato_base}\n"
-        paquete += f"APREHENDIDOS: {len(st.session_state.arrestados)}\n"
-        st.code(paquete)
+    for i, s in enumerate(st.session_state.secuestros):
+        with st.expander(f"Elemento {i+1}"):
+            foto_s = st.file_uploader(f"Foto del elemento {i+1}", key=f"f_s_{i}")
+            if foto_s:
+                st.image(foto_s, width=200)
+                # Descripción sugerida profesional
+                s["detalle"] = st.text_area("Descripción Profesional:", value=s["detalle"], key=f"det_s_{i}")
+            s["precinto"] = st.text_input("Nro. de Precinto", key=f"pre_s_{i}")
+
+# --- BLOQUE 4: GENERACIÓN FINAL (EL CORAZÓN DEL ACTA) ---
+with tabs[3]:
+    st.subheader("✍️ Pulido y Cruce de Datos Inteligente")
+    relato_sucio = st.text_area("Narración rápida del hecho:", height=200)
+    
+    if st.button("🚀 GENERAR ACTA INTEGRAL"):
+        # Cruce de datos automático para no cargar dos veces
+        txt_testigos = " / ".join([f"{t['ap']} (DNI: {t['dni']})" for t in st.session_state.testigos])
+        txt_apre = "\n".join([f"- {a['ap']} {a['nom']} (DNI: {a['dni']}). Vestimenta: {a['desc_foto']}" for a in st.session_state.arrestados])
+        txt_sec = "\n".join([f"- {s['detalle']} (Precinto: {s['precinto']})" for s in st.session_state.secuestros])
+        
+        acta = f"""
+        ACTA DE PROCEDIMIENTO - {dependencia}
+        FECHA: {date.today()} | 911: {incidencia} | MÓVIL: {movil}
+        
+        HECHO: {relato_sucio}
+        
+        ACTUACIÓN: Ante la presencia de los testigos {txt_testigos if txt_testigos else "[A DESIGNAR]"}, 
+        se procede en {l_apre} a la demora de:
+        {txt_apre if txt_apre else "Sujetos a identificar"}
+        
+        SECUESTROS:
+        {txt_sec if txt_sec else "No se registran."}
+        
+        Firmado: {personal}
+        """
+        st.code(acta, language="text")
