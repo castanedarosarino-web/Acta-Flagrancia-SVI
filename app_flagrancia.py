@@ -3,9 +3,9 @@ import json
 from datetime import datetime, date
 
 # =====================================================
-# 1. SEGURIDAD Y CONFIGURACIÓN (BLOQUE 1)
+# 1. PROTOCOLO DE SEGURIDAD Y ESTADO (LA BASE)
 # =====================================================
-TOKEN_ACCESO = "svi2026perez" 
+TOKEN_ACCESO = "svi2026perez"
 
 def verificar_acceso():
     if st.query_params.get("token") == TOKEN_ACCESO:
@@ -18,64 +18,51 @@ def verificar_acceso():
         st.stop()
 
 verificar_acceso()
-st.set_page_config(page_title="SVI - Santa Fe v5.1", layout="wide", page_icon="🚔")
+st.set_page_config(page_title="SVI - Esencia Policial v6.0", layout="wide", page_icon="🚔")
 
-# Inicialización de estados para que no se borre nada al cambiar de pestaña
+# INICIALIZACIÓN DE MEMORIA (No se rompe, no se olvida)
 if "victimas" not in st.session_state: st.session_state.victimas = []
 if "testigos" not in st.session_state: st.session_state.testigos = []
 if "arrestados" not in st.session_state: st.session_state.arrestados = []
 if "secuestros" not in st.session_state: st.session_state.secuestros = []
 if "relato_base" not in st.session_state: st.session_state.relato_base = ""
-if "inspeccion_ocular" not in st.session_state: st.session_state.inspeccion_ocular = ""
-if "fiscal_turno" not in st.session_state: st.session_state.fiscal_turno = ""
-if "directivas_fiscal" not in st.session_state: st.session_state.directivas_fiscal = ""
 
 # =====================================================
-# 2. PANEL LATERAL (IMPORTACIÓN Y GUARDADO)
+# 2. PANEL DE CONSOLIDACIÓN (SIDEBAR)
 # =====================================================
 with st.sidebar:
-    st.header("📂 Gestión de Archivos")
+    st.header("📂 Consolidación de Datos")
     st.caption("SubComisario Castañeda Juan")
     
-    archivos = st.file_uploader("Importar datos de móviles", type=["json"], accept_multiple_files=True)
+    archivos = st.file_uploader("Recibir JSON de Móviles", type=["json"], accept_multiple_files=True)
     if archivos:
         for a in archivos:
             try:
                 d = json.load(a)
                 if st.button(f"Fusionar {a.name}"):
                     st.session_state.victimas.extend(d.get("victimas", []))
-                    st.session_state.testigos.extend(d.get("testigos", []))
                     st.session_state.arrestados.extend(d.get("arrestados", []))
                     st.session_state.secuestros.extend(d.get("secuestros", []))
-                    st.success("✅ Datos integrados")
+                    st.success(f"✅ {a.name} Integrado")
                     st.rerun()
-            except: st.error("Error en archivo")
+            except: st.error("Error en formato")
 
     st.divider()
-    
-    # Datos para el respaldo total
-    respaldo = {
-        "victimas": st.session_state.victimas,
-        "testigos": st.session_state.testigos,
-        "arrestados": st.session_state.arrestados,
-        "secuestros": st.session_state.secuestros,
-        "relato": st.session_state.relato_base
-    }
-    st.download_button("💾 DESCARGAR TODO (JSON)", 
-                       data=json.dumps(respaldo, indent=2),
-                       file_name=f"SVI_RESPALDO_{date.today()}.json")
+    if st.button("🗑️ Limpiar Acta Actual"):
+        for k in ["victimas", "testigos", "arrestados", "secuestros", "relato_base"]: st.session_state[k] = []
+        st.rerun()
 
 # =====================================================
-# 3. INTERFAZ POR BLOQUES (TABS)
+# 3. ESTRUCTURA DE CARGA INMEJORABLE (BLOQUES)
 # =====================================================
-st.title("🚔 SVI - Sistema de Gestión de Actas")
-tabs = st.tabs(["1. Inicio", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre e IA"])
+st.title("🚔 SVI - Sistema de Validación de Identidad")
+tabs = st.tabs(["1. Inicio Operativo", "2. Filiación y Datos Legales", "3. Inspección y Secuestros", "4. Cierre Judicial"])
 
-# --- BLOQUE 1: DATOS OPERATIVOS ---
+# --- BLOQUE 1: LA IDENTIDAD DEL ACTA ---
 with tabs[0]:
     st.subheader("🛡️ Identificación Administrativa")
     c1, c2, c3, c4 = st.columns(4)
-    acta_n = c1.text_input("Nro. de Acta", placeholder="Ej: 154/26")
+    acta_n = c1.text_input("Nro. de Acta", placeholder="Ej: 001/26")
     incidencia = c2.text_input("Nro. Incidencia (911)")
     dep_lista = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "SUB 18", "OTRO"]
     dependencia = c3.selectbox("Dependencia", dep_lista)
@@ -83,7 +70,7 @@ with tabs[0]:
 
     c5, c6 = st.columns(2)
     personal = c5.text_input("Personal Actuante", value="SubComisario Castañeda Juan")
-    refuerzo = c6.text_input("Refuerzo (Móviles de apoyo)")
+    refuerzo = c6.text_input("Móviles de Apoyo / Refuerzos")
 
     c7, c8 = st.columns(2)
     fecha_acta = c7.date_input("Fecha", date.today())
@@ -94,48 +81,44 @@ with tabs[0]:
     lugar_aprehension = c10.text_input("👮 Lugar de Aprehensión")
 
     st.divider()
-    st.session_state.relato_base = st.text_area("📝 Relato Circunstanciado:", value=st.session_state.relato_base, height=350)
+    st.subheader("📝 Noticia Criminal (Relato)")
+    st.session_state.relato_base = st.text_area("Narración detallada:", value=st.session_state.relato_base, height=350)
 
-# --- BLOQUE 2: FILIACIÓN (PERSONAS) ---
-def form_p(tipo, lista):
-    st.subheader(f"👤 {tipo}")
-    if st.button(f"➕ Añadir {tipo}", key=f"btn_{tipo}"):
-        lista.append({"apellido": "", "nombre": "", "dni": "", "hijo_de": "", "domicilio": ""})
-    for i, p in enumerate(lista):
-        with st.expander(f"{tipo}: {p['apellido'].upper()}"):
-            p["apellido"] = st.text_input("Apellido", p["apellido"], key=f"ap_{tipo}_{i}")
-            p["nombre"] = st.text_input("Nombre", p["nombre"], key=f"nom_{tipo}_{i}")
-            p["dni"] = st.text_input("DNI", p["dni"], key=f"dni_{tipo}_{i}")
-            p["hijo_de"] = st.text_input("Hijo de", p["hijo_de"], key=f"hijo_{tipo}_{i}")
-            p["domicilio"] = st.text_input("Domicilio", p["domicilio"], key=f"dom_{tipo}_{i}")
-
+# --- BLOQUE 2: FILIACIÓN (LA ESENCIA LEGAL) ---
 with tabs[1]:
-    form_p("Arrestado", st.session_state.arrestados)
-    st.divider()
-    form_p("Víctima/Testigo", st.session_state.victimas)
+    st.subheader("👤 Registro de Personas (Filiación Completa)")
+    if st.button("➕ Agregar Aprehendido"):
+        st.session_state.arrestados.append({"apellido": "", "nombre": "", "dni": "", "hijo_de": "", "domicilio": ""})
+    
+    for i, a in enumerate(st.session_state.arrestados):
+        with st.expander(f"Aprehendido: {a['apellido'].upper()}"):
+            a["apellido"] = st.text_input("Apellido", a["apellido"], key=f"ap_{i}")
+            a["nombre"] = st.text_input("Nombre", a["nombre"], key=f"nom_{i}")
+            a["dni"] = st.text_input("DNI", a["dni"], key=f"dni_{i}")
+            a["hijo_de"] = st.text_input("Hijo de (Padre/Madre)", a["hijo_de"], key=f"hijo_{i}")
+            a["domicilio"] = st.text_input("Domicilio Real", a["domicilio"], key=f"dom_{i}")
 
-# --- BLOQUE 3: INSPECCIÓN ---
+# --- BLOQUE 3: INSPECCIÓN Y SECUESTROS ---
 with tabs[2]:
-    st.subheader("📸 Inspección Ocular")
-    st.session_state.inspeccion_ocular = st.text_area("Descripción de rastros y lugar:", value=st.session_state.inspeccion_ocular, height=300)
-
-# --- BLOQUE 4: SECUESTROS ---
-with tabs[3]:
+    st.subheader("📸 Diligencias Técnicas")
+    st.text_area("Inspección Ocular:", height=200)
+    st.divider()
     st.subheader("📦 Secuestros")
-    if st.button("➕ Añadir Elemento"):
+    if st.button("➕ Nuevo Elemento"):
         st.session_state.secuestros.append({"item": "", "serie": ""})
     for i, s in enumerate(st.session_state.secuestros):
         ca, cb = st.columns(2)
         s["item"] = ca.text_input("Elemento", s["item"], key=f"item_{i}")
-        s["serie"] = cb.text_input("Serie/Patente", s["serie"], key=f"serie_{i}")
+        s["serie"] = cb.text_input("Serie/IMEI/Patente", s["serie"], key=f"serie_{i}")
 
-# --- BLOQUE 5: CIERRE E IA ---
-with tabs[4]:
-    st.subheader("⚖️ Consulta Judicial")
-    st.session_state.fiscal_turno = st.text_input("Fiscalía en turno", value=st.session_state.fiscal_turno)
-    st.session_state.directivas_fiscal = st.text_area("Directivas:", value=st.session_state.directivas_fiscal)
+# --- BLOQUE 4: CIERRE ---
+with tabs[3]:
+    st.subheader("⚖️ Consulta con el Magistrado")
+    fiscal = st.text_input("Fiscal en Turno")
+    directivas = st.text_area("Directivas Impartidas")
     
-    if st.button("🚀 GENERAR PAQUETE FINAL"):
-        resumen = f"ACTA: {acta_n} | 911: {incidencia}\nHECHO: {st.session_state.relato_base}\n"
-        resumen += f"DETENIDOS: {len(st.session_state.arrestados)}\nFISCAL: {st.session_state.fiscal_turno}"
-        st.code(resumen)
+    if st.button("🚀 FINALIZAR Y COPIAR"):
+        paquete = f"AUTOR: {personal}\nCUP: {acta_n}\n911: {incidencia}\nMÓVIL: {movil}\n"
+        paquete += f"HECHO: {st.session_state.relato_base}\n"
+        paquete += f"APREHENDIDOS: {len(st.session_state.arrestados)}\n"
+        st.code(paquete)
