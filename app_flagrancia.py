@@ -69,20 +69,21 @@ with tabs[0]:
     st.subheader("📝 Relato Circunstanciado")
     relato_usuario = st.text_area("Narración de los hechos:", value=st.session_state.data_operativa["relato"], height=200)
 
-    # LÓGICA DE COPIADO AUTOMÁTICO AL PORTAPAPELES
-    prompt_ia = f"Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento. No uses lenguaje de IA. No pongas título 'Relato del hecho'. Redactá en estilo policial, como texto corrido que pueda continuar luego de 'SE HACE CONSTAR:'. Empezá con 'Que...' y mantené una redacción clara, formal y técnica. No inventes datos; utilizá únicamente lo siguiente: \\n\\n{relato_usuario}"
+    # LÓGICA DE COPIADO CON COHERENCIA NARRATIVA REFORZADA
+    prompt_ia = f"""Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento.
+    REGLA CRÍTICA DE COHERENCIA: Mantené la narración en PRIMERA PERSONA DEL PLURAL (Nosotros), ya que el acta es labrada por el funcionario a cargo y su chofer. 
+    No uses lenguaje de IA. No pongas título "Relato del hecho". 
+    Redactá en estilo policial técnico, como texto corrido que continúe luego de "SE HACE CONSTAR:". 
+    Empezá con "Que..." y mantené una redacción clara y formal. No inventes datos; usá lo siguiente: \n\n{relato_usuario}"""
 
-    # Botón invisible/JavaScript para copiar al portapapeles
     if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
-        # Usamos st.components para inyectar el copiado directo
         st.components.v1.html(f"""
             <script>
             navigator.clipboard.writeText(`{prompt_ia}`);
             </script>
             """, height=0)
-        st.success("✅ ¡Copiado! Ahora andá a ChatGPT/Gemini y apretá Ctrl+V (Pegar).")
+        st.success("✅ ¡Copiado con coherencia de narrador! Pegalo en la IA.")
 
-    # Guardado de estado
     st.session_state.data_operativa.update({
         "nro_acta": n_acta, "incidencia": n_incidencia, "dependencia": dep,
         "dependencia_otra": dep_otra, "movil": n_movil, "relato": relato_usuario, "personal": personal_actuante
