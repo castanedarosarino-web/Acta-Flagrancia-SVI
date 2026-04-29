@@ -1,4 +1,4 @@
-import streamlit as st  # <-- ESTO ES LO QUE FALTA
+import streamlit as st
 import json
 from datetime import datetime
 
@@ -39,17 +39,21 @@ with st.sidebar:
     st.subheader("📥 Cargar Trabajo de Calle")
     archivo_subido = st.file_uploader("Subir archivo JSON", type=["json"])
     
+    # LÓGICA DE CARGA MEJORADA
     if archivo_subido is not None:
         try:
-            datos_importados = json.load(archivo_subido)
-            st.session_state.data_operativa.update(datos_importados)
+            datos_nuevos = json.load(archivo_subido)
+            # Actualizamos el estado
+            st.session_state.data_operativa.update(datos_nuevos)
             st.success("✅ Datos cargados.")
+            # FORZAMOS RECARGA para que los datos aparezcan en los campos
+            st.rerun() 
         except Exception as e:
             st.error(f"Error al cargar: {e}")
 
     st.divider()
     
-    # LÓGICA DE DESCARGA REAL
+    # LÓGICA DE DESCARGA
     data_json = json.dumps(st.session_state.data_operativa, indent=4)
     st.download_button(
         label="💾 GUARDAR ACTA (JSON)",
@@ -74,40 +78,43 @@ with tabs[0]:
     n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"])
     n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
     
+    # Lógica para pre-seleccionar la dependencia cargada
+    dep_actual = st.session_state.data_operativa.get("dependencia", "CRE PÉREZ")
     dep_opciones = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
-    dep = c3.selectbox("Dependencia", dep_opciones)
+    # Buscamos el indice para que no de error si no existe
+    idx_dep = dep_opciones.index(dep_actual) if dep_actual in dep_opciones else 0
+    
+    dep = c3.selectbox("Dependencia", dep_opciones, index=idx_dep)
     
     if dep == "OTRO":
-        dep_otra = c4.text_input("Especifique Dependencia")
-        n_movil = st.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"])
+        dep_otra = c4.text_input("Especifique Dependencia", value=st.session_state.data_operativa.get("dependencia_otra", ""))
+        n_movil = st.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
     else:
-        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"])
+        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
         dep_otra = ""
 
-    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa["personal"])
-    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa["refuerzo"])
-
-    c5, c6 = st.columns(2)
-    fecha_proc = c5.date_input("Fecha", value=datetime.now())
-    hora_proc = c6.time_input("Hora", value=datetime.now())
-
-    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa["l_hecho"])
-    lugar_apre = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa["l_apre"])
+    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa.get("personal", "Sub Comisario CASTAÑEDA Juan"))
+    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa.get("refuerzo", ""))
 
     st.divider()
     st.subheader("📝 Relato Circunstanciado")
-    relato_usuario = st.text_area("Narración de los hechos:", value=st.session_state.data_operativa["relato"], height=200)
+    # El valor ahora se toma directamente del session_state actualizado por la carga
+    relato_usuario = st.text_area("Narración de los hechos:", 
+                                  value=st.session_state.data_operativa.get("relato", ""), 
+                                  height=200)
 
+    # El botón de copiado ya incluye el prompt
     prompt_ia = f"""Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento. 
-    REGLA CRÍTICA DE COHERENCIA: Mantené la narración en PRIMERA PERSONA DEL PLURAL (Nosotros). 
-    Empezá con "Que..." y mantené una redacción clara y formal. \n\n{relato_usuario}"""
+REGLA CRÍTICA DE COHERENCIA: Mantené la narración en PRIMERA PERSONA DEL PLURAL (Nosotros). 
+Empezá con "Que..." y mantené una redacción clara y formal. \n\n{relato_usuario}"""
 
     if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
         st.components.v1.html(f"<script>navigator.clipboard.writeText(`{prompt_ia}`);</script>", height=0)
-        st.success("✅ Copiado al portapapeles.")
+        st.success("✅ ¡Copiado! Pegalo en el chat de la IA.")
 
+    # Sincronizamos cualquier cambio manual que se haga en pantalla
     st.session_state.data_operativa.update({
         "nro_acta": n_acta, "incidencia": n_incidencia, "dependencia": dep,
-        "dependencia_otra": dep_otra, "movil": n_movil, "relato": relato_usuario, "personal": personal_actuante,
-        "l_hecho": lugar_hecho, "l_apre": lugar_apre
+        "dependencia_otra": dep_otra, "movil": n_movil, "relato": relato_usuario, 
+        "personal": personal_actuante, "refuerzo": refuerzos
     })
