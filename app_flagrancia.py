@@ -41,7 +41,6 @@ with st.sidebar:
         try:
             datos_nuevos = json.loads(archivo_json.getvalue().decode("utf-8"))
 
-            # JSON SOLO PARA DATOS ADMINISTRATIVOS
             campos_admin = [
                 "nro_acta",
                 "incidencia",
@@ -54,9 +53,58 @@ with st.sidebar:
                 "personal"
             ]
 
-            for campo in campos_admin:
-                if campo in datos_nuevos:
-                    st.session_state.data_operativa[campo] = datos_nuevos[campo]
+            mapa_admin = {
+                "nro acta": "nro_acta",
+                "nro_acta": "nro_acta",
+                "numero acta": "nro_acta",
+                "número acta": "nro_acta",
+                "acta": "nro_acta",
+
+                "incidencia": "incidencia",
+                "nro incidencia": "incidencia",
+                "nro_incidencia": "incidencia",
+                "numero incidencia": "incidencia",
+                "número incidencia": "incidencia",
+
+                "dependencia": "dependencia",
+                "dependencia otra": "dependencia_otra",
+                "dependencia_otra": "dependencia_otra",
+
+                "movil": "movil",
+                "móvil": "movil",
+                "nro movil": "movil",
+                "nro móvil": "movil",
+                "nro_movil": "movil",
+
+                "refuerzo": "refuerzo",
+                "personal": "personal",
+                "personal actuante": "personal",
+
+                "lugar_hecho": "l_hecho",
+                "lugar hecho": "l_hecho",
+                "lugar del hecho": "l_hecho",
+                "l_hecho": "l_hecho",
+
+                "lugar_aprehension": "l_apre",
+                "lugar_aprehensión": "l_apre",
+                "lugar aprehension": "l_apre",
+                "lugar aprehensión": "l_apre",
+                "lugar de aprehension": "l_apre",
+                "lugar de aprehensión": "l_apre",
+                "lugar_apre": "l_apre",
+                "lugar apre": "l_apre",
+                "l_apre": "l_apre",
+                "aprehension": "l_apre",
+                "aprehensión": "l_apre"
+            }
+
+            for k, v in datos_nuevos.items():
+                clave = str(k).strip().lower()
+
+                if clave in mapa_admin:
+                    st.session_state.data_operativa[mapa_admin[clave]] = v
+                elif clave in campos_admin:
+                    st.session_state.data_operativa[clave] = v
 
             st.success("✅ Datos administrativos cargados.")
 
