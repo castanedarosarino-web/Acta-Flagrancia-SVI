@@ -1,103 +1,86 @@
 import streamlit as st
-import json
-from datetime import datetime, date
+from datetime import datetime
 
 # =====================================================
-# 1. SEGURIDAD Y CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE INTERFAZ (SVI PROFESIONAL)
 # =====================================================
-TOKEN_ACCESO = "svi2026perez" 
+st.set_page_config(page_title="Consolidación SVI", layout="wide", page_icon="🚔")
 
-def verificar_acceso():
-    if st.query_params.get("token") == TOKEN_ACCESO:
-        st.session_state.autenticado = True
-    elif "autenticado" not in st.session_state:
-        st.session_state.autenticado = False
-    if not st.session_state.autenticado:
-        st.set_page_config(page_title="Acceso Restringido", page_icon="🚫")
-        st.error("🚫 Acceso Restringido")
-        st.stop()
-
-verificar_acceso()
-st.set_page_config(page_title="SVI - Santa Fe v5.0", layout="wide", page_icon="🚔")
-
-# Inicialización de estados persistentes
-if "victimas" not in st.session_state: st.session_state.victimas = []
-if "testigos" not in st.session_state: st.session_state.testigos = []
-if "arrestados" not in st.session_state: st.session_state.arrestados = []
-if "secuestros" not in st.session_state: st.session_state.secuestros = []
-if "relato_base" not in st.session_state: st.session_state.relato_base = ""
-if "inspeccion_ocular" not in st.session_state: st.session_state.inspeccion_ocular = ""
+# CSS para estilización idéntica a la captura (minimalista y limpia)
+st.markdown("""
+    <style>
+    .main { background-color: #f8f9fa; }
+    .stTextInput { margin-top: -15px; }
+    </style>
+    """, unsafe_allow_html=True)
 
 # =====================================================
-# 2. PANEL LATERAL (SIDEBAR)
+# 2. PERSISTENCIA DE DATOS (PARA NO PERDER NADA)
+# =====================================================
+if "data_operativa" not in st.session_state:
+    st.session_state.data_operativa = {
+        "nro_acta": "", "incidencia": "", "dependencia": "CRE PÉREZ",
+        "movil": "", "refuerzo": "", "l_hecho": "", "l_apre": ""
+    }
+
+# =====================================================
+# 3. SIDEBAR (CONSOLIDACIÓN SVI)
 # =====================================================
 with st.sidebar:
-    st.header("📂 Central de Recepción")
-    st.caption("SubComisario Castañeda Juan")
+    st.title("📂 Consolidación SVI")
+    st.write(f"**Operador:** SubComisario Castañeda Juan")
     
-    archivos = st.file_uploader("Importar JSON", type=["json"], accept_multiple_files=True)
-    if archivos:
-        for a in archivos:
-            try:
-                d = json.load(a)
-                if st.button(f"Fusionar {a.name}"):
-                    st.session_state.victimas.extend(d.get("victimas", []))
-                    st.session_state.testigos.extend(d.get("testigos", []))
-                    st.session_state.arrestados.extend(d.get("arrestados", []))
-                    st.session_state.secuestros.extend(d.get("secuestros", []))
-                    st.success("✅ Datos sumados")
-                    st.rerun()
-            except: st.error("Error en archivo")
-
     st.divider()
-    st.download_button("💾 GUARDAR ACTA (JSON)", 
-                       data=json.dumps({"victimas": st.session_state.victimas, "arrestados": st.session_state.arrestados}, indent=2),
-                       file_name=f"SVI_ACTA_{date.today()}.json")
+    st.subheader("Subir datos del móvil")
+    st.file_uploader("Upload", type=["json"], help="Carga de datos SVI previos")
+    
+    st.divider()
+    if st.button("🗑️ Limpiar Todo"):
+        for key in st.session_state.keys():
+            del st.session_state[key]
+        st.rerun()
 
 # =====================================================
-# 3. BLOQUE 1: INICIO (RECONSTRUIDO AL 100%)
+# 4. CUERPO PRINCIPAL - BLOQUE 1 PERFECTO
 # =====================================================
-st.title("🚔 SVI - Sistema de Gestión de Actas")
-tabs = st.tabs(["1. Inicio (Datos Base)", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre"])
+st.title("🚓 SVI - Sistema de Identificación y Sumarios")
+
+# Pestañas respetando el diseño de la captura original
+tabs = st.tabs(["1. Inicio (Operativo)", "2. Filiación (Legal)", "3. Inspección", "4. Secuestros", "5. Cierre e IA"])
 
 with tabs[0]:
-    st.subheader("🛡️ Identificación Administrativa y Operativa")
+    st.subheader("🛡️ Identificación del Procedimiento")
     
-    # Fila 1: Números y Dependencia
-    c1, c2, c3, c4 = st.columns(4)
-    acta_n = c1.text_input("Nro. de Acta", placeholder="Ej: 154/26")
-    incidencia = c2.text_input("Nro. Incidencia (911)", placeholder="Ej: 2026-00123")
-    dependencia = c3.selectbox("Dependencia", ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "SUB 18", "OTRO"])
-    movil = c4.text_input("Nro. de Móvil", placeholder="Ej: 9845")
+    # FILA 1: Identificadores técnicos
+    c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
+    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"], placeholder="Ej: 154/2026")
+    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
+    dep = c3.selectbox("Dependencia", ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M."], index=0)
+    n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"])
 
-    # Fila 2: Personal y Apoyo
+    # FILA 2: Personal y Apoyo
+    st.write("") # Espaciador
+    personal_fijo = st.text_input("Personal Actuante", value="SubComisario Castañeda Juan", disabled=True)
+    refuerzos = st.text_input("Refuerzo (Móviles/Personal en apoyo)", value=st.session_state.data_operativa["refuerzo"])
+
+    # FILA 3: Tiempo y Espacio (📍 Esencia del procedimiento)
     c5, c6 = st.columns(2)
-    personal = c5.text_input("Personal Actuante", value="SubComisario Castañeda Juan")
-    refuerzo = c6.text_input("Refuerzo (Móviles/Personal de apoyo)")
+    fecha_proc = c5.date_input("Fecha", value=datetime.now())
+    hora_proc = c6.time_input("Hora", value=datetime.now())
 
-    # Fila 3: Tiempo
-    c7, c8 = st.columns(2)
-    fecha_acta = c7.date_input("Fecha", date.today())
-    hora_acta = c8.time_input("Hora", datetime.now().time())
+    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa["l_hecho"])
+    lugar_apre = st.text_input("👮 Lugar de Aprehensión", value=st.session_state.data_operativa["l_apre"])
 
-    # Fila 4: Ubicaciones
-    c9, c10 = st.columns(2)
-    lugar_hecho = c9.text_input("📍 Lugar del Hecho", placeholder="Calle y Nro / Intersección")
-    lugar_aprehension = c10.text_input("👮 Lugar de Aprehensión", placeholder="Si difiere del lugar del hecho")
+    # Guardado automático en el estado de la sesión
+    st.session_state.data_operativa.update({
+        "nro_acta": n_acta, "incidencia": n_incidencia, "dependencia": dep,
+        "movil": n_movil, "refuerzo": refuerzos, "l_hecho": lugar_hecho, "l_apre": lugar_apre
+    })
 
-    st.divider()
-    
-    # Fila 5: Relato
-    st.subheader("📝 Relato Circunstanciado")
-    st.session_state.relato_base = st.text_area("Narración cronológica y detallada:", 
-                                               value=st.session_state.relato_base, 
-                                               height=400,
-                                               placeholder="A la hora indicada, cumplimentando directivas de la Central 911...")
-
-# --- RESTO DE LOS BLOQUES (FILIACIÓN, INSPECCIÓN, ETC) ---
-with tabs[1]:
-    st.info("Utilice el botón de la izquierda para sumar personas desde los móviles.")
-    # (Aquí iría el formulario de filiación que ya tenemos)
-
-with tabs[2]:
-    st.session_state.inspeccion_ocular = st.text_area("Detalles de la Inspección Ocular:", value=st.session_state.inspeccion_ocular, height=300)
+# =====================================================
+# CONTINUIDAD: LAS DEMÁS PESTAÑAS QUEDAN LISTAS PARA CARGAR
+# =====================================================
+with tabs[1]: st.info("Esperando directivas para Filiación (Legal)...")
+with tabs[2]: st.info("Bloque de Inspección...")
+with tabs[3]: st.info("Bloque de Secuestros...")
+with tabs[4]: st.info("Generador de Cierre e IA...")
