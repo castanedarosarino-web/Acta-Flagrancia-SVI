@@ -1,36 +1,113 @@
+import streamlit as st  # <-- ESTO ES LO QUE FALTA
 import json
+from datetime import datetime
 
-# ... (dentro de st.sidebar) ...
+# =====================================================
+# 1. CONFIGURACIÓN Y ESTÉTICA (SVI PROFESIONAL)
+# =====================================================
+st.set_page_config(page_title="SVI - Acta de Procedimiento", layout="wide", page_icon="🚔")
 
+st.markdown("""
+    <style>
+    .main { background-color: #f8f9fa; }
+    .stTextInput { margin-top: -15px; }
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+
+# =====================================================
+# 2. PERSISTENCIA DE DATOS
+# =====================================================
+if "data_operativa" not in st.session_state:
+    st.session_state.data_operativa = {
+        "nro_acta": "", "incidencia": "", "dependencia": "CRE PÉREZ",
+        "dependencia_otra": "", "movil": "", "refuerzo": "", 
+        "l_hecho": "", "l_apre": "", "relato": "",
+        "personal": "Sub Comisario CASTAÑEDA Juan"
+    }
+
+# =====================================================
+# 3. SIDEBAR (CENTRAL DE RECEPCIÓN)
+# =====================================================
 with st.sidebar:
     st.title("📂 Central de Recepción")
     st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
     
     st.divider()
     st.subheader("📥 Cargar Trabajo de Calle")
-    archivo_subido = st.file_uploader("Subir archivo JSON", type=["json"], help="200MB per file • JSON")
+    archivo_subido = st.file_uploader("Subir archivo JSON", type=["json"])
     
     if archivo_subido is not None:
         try:
             datos_importados = json.load(archivo_subido)
             st.session_state.data_operativa.update(datos_importados)
-            st.success("✅ Datos cargados correctamente.")
+            st.success("✅ Datos cargados.")
         except Exception as e:
             st.error(f"Error al cargar: {e}")
 
     st.divider()
     
-    # PREPARACIÓN DEL ARCHIVO PARA DESCARGA
-    # Generamos el contenido del JSON basado en lo que hay en pantalla
-    data_a_guardar = json.dumps(st.session_state.data_operativa, indent=4)
-    nombre_archivo = f"acta_{st.session_state.data_operativa.get('nro_acta', 'sin_numero')}.json"
-
-    # EL BOTÓN CORRECTO: st.download_button
-    # Este componente es el único que activa la descarga real en el navegador
+    # LÓGICA DE DESCARGA REAL
+    data_json = json.dumps(st.session_state.data_operativa, indent=4)
     st.download_button(
         label="💾 GUARDAR ACTA (JSON)",
-        data=data_a_guardar,
-        file_name=nombre_archivo,
+        data=data_json,
+        file_name=f"acta_{st.session_state.data_operativa.get('nro_acta', 'SVI')}.json",
         mime="application/json",
         use_container_width=True
     )
+
+# =====================================================
+# 4. CUERPO PRINCIPAL - BLOQUE 1
+# =====================================================
+st.title("🚔 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
+st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
+
+tabs = st.tabs(["1. Inicio (Datos Base)", "2. Arrestado", "3. Victima", "4. Testigo", "5. Consulta", "6. Inspección", "7. Secuestros", "8. Cierre"])
+
+with tabs[0]:
+    st.subheader("🛡️ Identificación Administrativa y Operativa")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"])
+    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
+    
+    dep_opciones = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
+    dep = c3.selectbox("Dependencia", dep_opciones)
+    
+    if dep == "OTRO":
+        dep_otra = c4.text_input("Especifique Dependencia")
+        n_movil = st.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"])
+    else:
+        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"])
+        dep_otra = ""
+
+    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa["personal"])
+    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa["refuerzo"])
+
+    c5, c6 = st.columns(2)
+    fecha_proc = c5.date_input("Fecha", value=datetime.now())
+    hora_proc = c6.time_input("Hora", value=datetime.now())
+
+    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa["l_hecho"])
+    lugar_apre = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa["l_apre"])
+
+    st.divider()
+    st.subheader("📝 Relato Circunstanciado")
+    relato_usuario = st.text_area("Narración de los hechos:", value=st.session_state.data_operativa["relato"], height=200)
+
+    prompt_ia = f"""Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento. 
+    REGLA CRÍTICA DE COHERENCIA: Mantené la narración en PRIMERA PERSONA DEL PLURAL (Nosotros). 
+    Empezá con "Que..." y mantené una redacción clara y formal. \n\n{relato_usuario}"""
+
+    if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
+        st.components.v1.html(f"<script>navigator.clipboard.writeText(`{prompt_ia}`);</script>", height=0)
+        st.success("✅ Copiado al portapapeles.")
+
+    st.session_state.data_operativa.update({
+        "nro_acta": n_acta, "incidencia": n_incidencia, "dependencia": dep,
+        "dependencia_otra": dep_otra, "movil": n_movil, "relato": relato_usuario, "personal": personal_actuante,
+        "l_hecho": lugar_hecho, "l_apre": lugar_apre
+    })
