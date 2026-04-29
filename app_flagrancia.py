@@ -51,24 +51,12 @@ def cargar_datos_json(datos):
     plano = aplanar_json(datos)
 
     campos = {
-        "nro_acta": [
-            "nro acta", "numero acta", "número acta", "acta"
-        ],
-        "incidencia": [
-            "incidencia", "nro incidencia", "numero incidencia", "número incidencia", "911"
-        ],
-        "dependencia": [
-            "dependencia", "unidad", "cre"
-        ],
-        "movil": [
-            "movil", "móvil", "nro movil", "nro móvil", "numero movil", "número móvil"
-        ],
-        "refuerzo": [
-            "refuerzo", "apoyo", "moviles apoyo", "móviles apoyo"
-        ],
-        "l_hecho": [
-            "l hecho", "lugar hecho", "lugar del hecho", "domicilio hecho"
-        ],
+        "nro_acta": ["nro acta", "numero acta", "número acta", "acta"],
+        "incidencia": ["incidencia", "nro incidencia", "numero incidencia", "número incidencia", "911"],
+        "dependencia": ["dependencia", "unidad", "cre"],
+        "movil": ["movil", "móvil", "nro movil", "nro móvil", "numero movil", "número móvil"],
+        "refuerzo": ["refuerzo", "apoyo", "moviles apoyo", "móviles apoyo"],
+        "l_hecho": ["l hecho", "lugar hecho", "lugar del hecho", "domicilio hecho"],
         "l_apre": [
             "l apre", "lugar apre", "lugar aprehension", "lugar aprehensión",
             "lugar de aprehension", "lugar de aprehensión", "domicilio aprehension"
@@ -80,9 +68,7 @@ def cargar_datos_json(datos):
             "descripción", "circunstancias", "procedimiento",
             "texto", "detalle", "observaciones"
         ],
-        "personal": [
-            "personal", "personal actuante", "actuante"
-        ]
+        "personal": ["personal", "personal actuante", "actuante"]
     }
 
     for destino, variantes in campos.items():
@@ -153,21 +139,44 @@ with tabs[0]:
     dep = c3.selectbox("Dependencia", dep_opciones, index=idx_dep)
 
     if dep == "OTRO":
-        dep_otra = c4.text_input("Especifique Dependencia", value=st.session_state.data_operativa.get("dependencia_otra", ""))
-        n_movil = st.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
+        dep_otra = c4.text_input(
+            "Especifique Dependencia",
+            value=st.session_state.data_operativa.get("dependencia_otra", "")
+        )
+        n_movil = st.text_input(
+            "Nro. de Móvil",
+            value=st.session_state.data_operativa.get("movil", "")
+        )
     else:
-        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
+        n_movil = c4.text_input(
+            "Nro. de Móvil",
+            value=st.session_state.data_operativa.get("movil", "")
+        )
         dep_otra = ""
 
-    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa.get("personal", "Sub Comisario CASTAÑEDA Juan"))
-    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa.get("refuerzo", ""))
+    personal_actuante = st.text_input(
+        "Personal Actuante",
+        value=st.session_state.data_operativa.get("personal", "Sub Comisario CASTAÑEDA Juan")
+    )
+
+    refuerzos = st.text_input(
+        "Refuerzo (Móviles/Personal de apoyo)",
+        value=st.session_state.data_operativa.get("refuerzo", "")
+    )
 
     c5, c6 = st.columns(2)
     fecha_proc = c5.date_input("Fecha", value=datetime.now())
     hora_proc = c6.time_input("Hora", value=datetime.now())
 
-    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa.get("l_hecho", ""))
-    lugar_apre = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa.get("l_apre", ""))
+    lugar_hecho = st.text_input(
+        "📍 Lugar del Hecho",
+        value=st.session_state.data_operativa.get("l_hecho", "")
+    )
+
+    lugar_apre = st.text_input(
+        "👤 Lugar de Aprehensión",
+        value=st.session_state.data_operativa.get("l_apre", "")
+    )
 
     st.divider()
     st.subheader("📝 Relato Circunstanciado")
@@ -178,9 +187,7 @@ with tabs[0]:
         height=200
     )
 
-    prompt_ia = f"""Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento. 
-REGLA CRÍTICA DE COHERENCIA: Mantené la narración en PRIMERA PERSONA DEL PLURAL (Nosotros). 
-Empezá con "Que..." y mantené una redacción clara y formal. \n\n{relato_usuario}"""
+    prompt_ia = relato_usuario
 
     if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
         st.components.v1.html(
