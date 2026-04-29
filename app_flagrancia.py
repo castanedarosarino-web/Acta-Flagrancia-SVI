@@ -29,15 +29,12 @@ with st.sidebar:
     
     if archivo_subido is not None:
         try:
-            datos_nuevos = json.loads(archivo_subido.getvalue().decode("utf-8"))
-
-            # Actualizamos solo las llaves existentes para no romper la estructura
-            for k in st.session_state.data_operativa.keys():
-                if k in datos_nuevos:
-                    st.session_state.data_operativa[k] = datos_nuevos[k]
-
+            datos_nuevos = json.load(archivo_subido)
+            # Actualizamos la memoria interna
+            for k, v in datos_nuevos.items():
+                st.session_state.data_operativa[k] = v
             st.success("✅ Datos sincronizados.")
-
+            st.rerun() # Forzamos el redibujado de la pantalla
         except Exception as e:
             st.error(f"Error: {e}")
 
