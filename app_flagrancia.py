@@ -28,75 +28,54 @@ if "data_operativa" not in st.session_state:
         "personal": "Sub Comisario CASTAÑEDA Juan"
     }
 
-def normalizar_clave(clave):
-    return str(clave).strip().lower().replace("_", " ").replace("-", " ")
-
-def aplanar_json(data, salida=None):
-    if salida is None:
-        salida = {}
-
-    if isinstance(data, dict):
-        for k, v in data.items():
-            salida[normalizar_clave(k)] = v
-            if isinstance(v, (dict, list)):
-                aplanar_json(v, salida)
-
-    elif isinstance(data, list):
-        for item in data:
-            aplanar_json(item, salida)
-
-    return salida
-
-def cargar_datos_json(datos):
-    plano = aplanar_json(datos)
-
-    campos = {
-        "nro_acta": ["nro acta", "numero acta", "número acta", "acta"],
-        "incidencia": ["incidencia", "nro incidencia", "numero incidencia", "número incidencia", "911"],
-        "dependencia": ["dependencia", "unidad", "cre"],
-        "movil": ["movil", "móvil", "nro movil", "nro móvil", "numero movil", "número móvil"],
-        "refuerzo": ["refuerzo", "apoyo", "moviles apoyo", "móviles apoyo"],
-        "l_hecho": ["l hecho", "lugar hecho", "lugar del hecho", "domicilio hecho"],
-        "l_apre": [
-            "l apre", "lugar apre", "lugar aprehension", "lugar aprehensión",
-            "lugar de aprehension", "lugar de aprehensión", "domicilio aprehension"
-        ],
-        "relato": [
-            "relato", "relato hechos", "relato de los hechos",
-            "narracion", "narración", "narracion de los hechos",
-            "narración de los hechos", "hechos", "descripcion",
-            "descripción", "circunstancias", "procedimiento",
-            "texto", "detalle", "observaciones"
-        ],
-        "personal": ["personal", "personal actuante", "actuante"]
-    }
-
-    for destino, variantes in campos.items():
-        for variante in variantes:
-            clave_normal = normalizar_clave(variante)
-            if clave_normal in plano and plano[clave_normal] not in [None, ""]:
-                st.session_state.data_operativa[destino] = str(plano[clave_normal])
-                break
-
 with st.sidebar:
     st.title("📂 Central de Recepción")
     st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
 
     st.divider()
-    st.subheader("📥 Cargar Trabajo de Calle")
-    archivo_subido = st.file_uploader("Subir archivo JSON", type=["json"])
 
-    if archivo_subido is not None:
+    st.subheader("📥 Cargar Datos Administrativos")
+    archivo_json = st.file_uploader("Subir archivo JSON", type=["json"], key="json_admin")
+
+    if archivo_json is not None:
         try:
-            datos_nuevos = json.loads(archivo_subido.getvalue().decode("utf-8"))
-            cargar_datos_json(datos_nuevos)
-            st.success("✅ Datos del móvil integrados.")
+            datos_nuevos = json.loads(archivo_json.getvalue().decode("utf-8"))
 
-            with st.expander("🔍 Ver claves detectadas del JSON"):
-                st.json(aplanar_json(datos_nuevos))
+            # JSON SOLO PARA DATOS ADMINISTRATIVOS
+            campos_admin = [
+                "nro_acta",
+                "incidencia",
+                "dependencia",
+                "dependencia_otra",
+                "movil",
+                "refuerzo",
+                "l_hecho",
+                "l_apre",
+                "personal"
+            ]
+
+            for campo in campos_admin:
+                if campo in datos_nuevos:
+                    st.session_state.data_operativa[campo] = datos_nuevos[campo]
+
+            st.success("✅ Datos administrativos cargados.")
 
         except Exception as e:
-            st.error(f"Error al cargar: {e}")
+            st.error(f"Error al cargar JSON: {e}")
+
+    st.divider()
+
+    st.subheader("📝 Cargar Relato")
+    archivo_txt = st.file_uploader("Subir relato TXT", type=["txt"], key="txt_relato")
+
+    if archivo_txt is not None:
+        try:
+            texto_relato = archivo_txt.getvalue().decode("utf-8")
+            st.session_state.data_operativa["relato"] = texto_relato
+            st.success("✅ Relato cargado desde TXT.")
+
+        except Exception as e:
+            st.error(f"Error al cargar TXT: {e}")
 
     st.divider()
 
