@@ -19,9 +19,9 @@ def verificar_acceso():
 verificar_acceso()
 st.set_page_config(page_title="SVI - Cooperativo Santa Fe", layout="wide", page_icon="🚔")
 
-# Inicialización de estados
- campos = ["victimas", "testigos", "arrestados", "secuestros"]
-for campo in campos:
+# Inicialización de estados (Evita errores de variables vacías)
+campos_lista = ["victimas", "testigos", "arrestados", "secuestros"]
+for campo in campos_lista:
     if campo not in st.session_state: st.session_state[campo] = []
 
 if "cup" not in st.session_state: st.session_state.cup = ""
@@ -31,41 +31,43 @@ if "fiscal_turno" not in st.session_state: st.session_state.fiscal_turno = ""
 if "directivas_fiscal" not in st.session_state: st.session_state.directivas_fiscal = ""
 
 # =====================================================
-# 2. PANEL DE RECEPCIÓN (SUBIDA DE DATOS)
+# 2. PANEL DE RECEPCIÓN (ELIMINADA TODA RESTRICCIÓN)
 # =====================================================
 with st.sidebar:
     st.header("📂 Central de Recepción")
-    st.caption(f"Operador: SubComisario Castañeda Juan")
+    st.caption("Operador: SubComisario Castañeda Juan")
     
-    archivos = st.file_uploader("Recibir datos de móviles (JSON)", type=["json"], accept_multiple_files=True)
+    archivos = st.file_uploader("Recibir datos JSON", type=["json"], accept_multiple_files=True)
     
     if archivos:
         for a in archivos:
             try:
-                datos_importados = json.load(a)
+                # Leemos el archivo sin importar el nombre o el CUP interno
+                datos = json.load(a)
                 with st.expander(f"📥 Archivo: {a.name}", expanded=True):
-                    # ELIMINAMOS LA VALIDACIÓN RÍGIDA DE CUP PARA EVITAR ERRORES
-                    st.warning(f"Contenido: {len(datos_importados.get('victimas',[]))} Vict. / {len(datos_importados.get('arrestados',[]))} Arr.")
+                    # Solo mostramos resumen para que el usuario sepa qué está cargando
+                    st.write(f"Contiene: {len(datos.get('victimas',[]))} personas.")
                     
-                    if st.button(f"Fusionar en Acta Actual", key=f"fusi_{a.name}"):
-                        st.session_state.victimas.extend(datos_importados.get("victimas", []))
-                        st.session_state.testigos.extend(datos_importados.get("testigos", []))
-                        st.session_state.arrestados.extend(datos_importados.get("arrestados", []))
-                        st.session_state.secuestros.extend(datos_importados.get("secuestros", []))
+                    if st.button(f"Importar Datos", key=f"btn_imp_{a.name}"):
+                        # Unimos las listas sin validaciones previas
+                        st.session_state.victimas.extend(datos.get("victimas", []))
+                        st.session_state.testigos.extend(datos.get("testigos", []))
+                        st.session_state.arrestados.extend(datos.get("arrestados", []))
+                        st.session_state.secuestros.extend(datos.get("secuestros", []))
                         
-                        # Si el relato actual está vacío, traer el del archivo
+                        # Si el relato está vacío en el sistema principal, traemos el del archivo
                         if not st.session_state.relato_base:
-                            st.session_state.relato_base = datos_importados.get("relato_base", "")
+                            st.session_state.relato_base = datos.get("relato_base", "")
                         
-                        st.success("✅ Datos integrados")
+                        st.success("✅ Integrado correctamente")
                         st.rerun()
-            except Exception as e:
-                st.error("Error al leer el archivo")
+            except:
+                st.error("Archivo no compatible")
 
     st.divider()
     
-    # --- SISTEMA DE GUARDADO ---
-    datos_para_guardar = {
+    # --- BOTÓN DE GUARDADO ---
+    datos_actuales = {
         "cup": st.session_state.cup,
         "relato_base": st.session_state.relato_base,
         "victimas": st.session_state.victimas,
@@ -78,67 +80,66 @@ with st.sidebar:
     }
     
     st.download_button(
-        label="💾 GUARDAR TODO",
-        data=json.dumps(datos_para_guardar, indent=4),
-        file_name=f"SVI_{st.session_state.cup}.json" if st.session_state.cup else "SVI_BORRADOR.json",
+        label="💾 Guardar Todo (PC)",
+        data=json.dumps(datos_actuales, indent=4),
+        file_name=f"SVI_{st.session_state.cup}.json" if st.session_state.cup else "SVI_PROCESO.json",
         mime="application/json"
     )
 
 # =====================================================
-# 3. CUERPO DEL ACTA
+# 3. INTERFAZ DE CARGA
 # =====================================================
-st.title("🚔 SVI - Sistema de Validación de Identidad")
-t1, t2, t3, t4, t5 = st.tabs(["1. Inicio", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Final e IA"])
+st.title("🚔 SVI - Consolidación de Sumarios")
+tabs = st.tabs(["1. Inicio", "2. Filiación Completa", "3. Inspección Ocular", "4. Secuestros", "5. Final e IA"])
 
-with t1:
+with tabs[0]:
     st.subheader("🛡️ Identificación del Procedimiento")
-    col_a, col_b, col_c, col_d = st.columns([1, 2, 1, 1])
-    ur = col_a.selectbox("U. Regional", ["UR II", "UR IV", "UR XVII", "UR I"])
-    dep = col_b.selectbox("Dependencia", ["CRE PÉREZ", "CRE ROSARIO", "COMISARÍA 22", "SUB 18", "OTRO"])
-    acta_n = col_c.text_input("Acta N°", value="")
-    anio_n = col_d.text_input("Año", value="2026")
+    c1, c2, c3, c4 = st.columns([1, 2, 1, 1])
+    ur = c1.selectbox("U. Regional", ["UR II", "UR IV", "UR XVII", "UR I"])
+    dep = c2.selectbox("Dependencia", ["CRE PÉREZ", "CRE ROSARIO", "CRE FUNES", "COMISARÍA 22", "OTRO"])
+    acta = c3.text_input("Acta N°", value="")
+    anio = c4.text_input("Año", value="2026")
     
-    # Actualizamos el CUP global
-    if acta_n:
-        st.session_state.cup = f"{ur}-{dep.replace(' ', '_')}-{acta_n}-{anio_n}"
+    if acta:
+        st.session_state.cup = f"{ur}-{dep.replace(' ', '_')}-{acta}-{anio}"
         st.info(f"🔐 SELLO ÚNICO: {st.session_state.cup}")
     
-    st.session_state.relato_base = st.text_area("RELATO PREVENTIVO / NOTICIA CRIMINAL", value=st.session_state.relato_base, height=300)
+    st.session_state.relato_base = st.text_area("RELATO PREVENTIVO / NOTICIA CRIMINAL", value=st.session_state.relato_base, height=250)
 
-def cargar_persona(tipo, lista):
+def render_filiacion(tipo, lista):
     st.subheader(f"👤 {tipo}")
-    if st.button(f"➕ Añadir {tipo}", key=f"btn_{tipo}"):
-        lista.append({"apellido": "", "nombre": "", "dni": "", "domicilio": "Pérez", "manifiesta": ""})
+    if st.button(f"➕ Agregar {tipo}", key=f"add_{tipo}"):
+        lista.append({"apellido": "", "nombre": "", "dni": "", "domicilio": "", "manifiesta": ""})
     
     for i, p in enumerate(lista):
-        with st.expander(f"{tipo} {i+1}: {p['apellido']}"):
-            p["apellido"] = st.text_input("Apellido", p["apellido"], key=f"ap_{tipo}_{i}")
-            p["nombre"] = st.text_input("Nombre", p["nombre"], key=f"nom_{tipo}_{i}")
-            p["dni"] = st.text_input("DNI", p["dni"], key=f"dni_{tipo}_{i}")
-            p["domicilio"] = st.text_input("Domicilio", p["domicilio"], key=f"dom_{tipo}_{i}")
-            p["manifiesta"] = st.text_area("Declaración", p["manifiesta"], key=f"man_{tipo}_{i}")
+        with st.expander(f"{tipo}: {p.get('apellido', 'Nuevo')}"):
+            p["apellido"] = st.text_input("Apellido", p.get("apellido", ""), key=f"ap_{tipo}_{i}")
+            p["nombre"] = st.text_input("Nombre", p.get("nombre", ""), key=f"nom_{tipo}_{i}")
+            p["dni"] = st.text_input("DNI", p.get("dni", ""), key=f"dni_{tipo}_{i}")
+            p["manifiesta"] = st.text_area("Declaración / Entrevista", p.get("manifiesta", ""), key=f"txt_{tipo}_{i}")
 
-with t2:
-    cargar_persona("Victima", st.session_state.victimas)
+with tabs[1]:
+    render_filiacion("Damnificado", st.session_state.victimas)
     st.divider()
-    cargar_persona("Arrestado", st.session_state.arrestados)
+    render_filiacion("Arrestado", st.session_state.arrestados)
+    st.divider()
+    render_filiacion("Testigo", st.session_state.testigos)
 
-with t3:
-    st.session_state.inspeccion_ocular = st.text_area("Detalles de la Inspección Ocular:", value=st.session_state.inspeccion_ocular, height=300)
+with tabs[2]:
+    st.session_state.inspeccion_ocular = st.text_area("Inspección Ocular y Rastreos:", value=st.session_state.inspeccion_ocular, height=300)
 
-with t4:
-    if st.button("➕ Agregar Secuestro"):
+with tabs[3]:
+    if st.button("➕ Cargar Elemento"):
         st.session_state.secuestros.append({"item": "", "serie": ""})
     for i, s in enumerate(st.session_state.secuestros):
-        col1, col2 = st.columns(2)
-        s["item"] = col1.text_input("Elemento", s["item"], key=f"item_{i}")
-        s["serie"] = col2.text_input("Nro Serie / Patente", s["serie"], key=f"serie_{i}")
+        ca, cb = st.columns(2)
+        s["item"] = ca.text_input("Elemento", s.get("item", ""), key=f"sec_i_{i}")
+        s["serie"] = cb.text_input("Nro Serie / Patente", s.get("serie", ""), key=f"sec_s_{i}")
 
-with t5:
-    st.session_state.fiscal_turno = st.text_input("Fiscal en turno:", value=st.session_state.fiscal_turno)
-    st.session_state.directivas_fiscal = st.text_area("Directivas:", value=st.session_state.directivas_fiscal)
+with tabs[4]:
+    st.session_state.fiscal_turno = st.text_input("Fiscalía / Dr.", value=st.session_state.fiscal_turno)
+    st.session_state.directivas_fiscal = st.text_area("Directivas del Magistrado", value=st.session_state.directivas_fiscal)
     
-    if st.button("🚀 GENERAR RESUMEN PARA REDACCIÓN"):
-        resumen = f"CUP: {st.session_state.cup}\nHECHO: {st.session_state.relato_base}\n"
-        resumen += f"ARRESTADOS: {len(st.session_state.arrestados)}\n"
-        st.text_area("Paquete de datos:", resumen)
+    if st.button("🚀 GENERAR PAQUETE PARA REDACCIÓN"):
+        redaccion = f"CUP: {st.session_state.cup}\nFISCAL: {st.session_state.fiscal_turno}\nRELATO: {st.session_state.relato_base}\n"
+        st.text_area("Copiá este texto para la IA:", redaccion, height=300)
