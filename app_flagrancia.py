@@ -3,7 +3,7 @@ import json
 from datetime import datetime, date
 
 # =====================================================
-# 1. SEGURIDAD Y CONFIGURACIÓN (BLOQUE 1 - BASE)
+# 1. SEGURIDAD Y CONFIGURACIÓN
 # =====================================================
 TOKEN_ACCESO = "svi2026perez" 
 
@@ -18,22 +18,24 @@ def verificar_acceso():
         st.stop()
 
 verificar_acceso()
-st.set_page_config(page_title="SVI - Santa Fe v5.5 (Esencia Recuperada)", layout="wide", page_icon="🚔")
+st.set_page_config(page_title="SVI - Santa Fe v5.0", layout="wide", page_icon="🚔")
 
-# PERSISTENCIA TOTAL: Nada se borra al navegar
+# Inicialización de estados persistentes
 if "victimas" not in st.session_state: st.session_state.victimas = []
 if "testigos" not in st.session_state: st.session_state.testigos = []
 if "arrestados" not in st.session_state: st.session_state.arrestados = []
 if "secuestros" not in st.session_state: st.session_state.secuestros = []
 if "relato_base" not in st.session_state: st.session_state.relato_base = ""
+if "inspeccion_ocular" not in st.session_state: st.session_state.inspeccion_ocular = ""
 
 # =====================================================
-# 2. PANEL DE FUSIÓN (SIDEBAR) - SIN ERRORES
+# 2. PANEL LATERAL (SIDEBAR)
 # =====================================================
 with st.sidebar:
-    st.header("📂 Consolidación SVI")
-    st.caption("Operador: SubComisario Castañeda Juan")
-    archivos = st.file_uploader("Subir datos del móvil", type=["json"], accept_multiple_files=True)
+    st.header("📂 Central de Recepción")
+    st.caption("SubComisario Castañeda Juan")
+    
+    archivos = st.file_uploader("Importar JSON", type=["json"], accept_multiple_files=True)
     if archivos:
         for a in archivos:
             try:
@@ -43,80 +45,59 @@ with st.sidebar:
                     st.session_state.testigos.extend(d.get("testigos", []))
                     st.session_state.arrestados.extend(d.get("arrestados", []))
                     st.session_state.secuestros.extend(d.get("secuestros", []))
-                    st.success("✅ Datos sumados al acta")
+                    st.success("✅ Datos sumados")
                     st.rerun()
-            except: st.error("Archivo no compatible")
-    
+            except: st.error("Error en archivo")
+
     st.divider()
-    if st.button("🗑️ Limpiar Todo"):
-        for k in ["victimas", "testigos", "arrestados", "secuestros", "relato_base"]: st.session_state[k] = []
-        st.rerun()
+    st.download_button("💾 GUARDAR ACTA (JSON)", 
+                       data=json.dumps({"victimas": st.session_state.victimas, "arrestados": st.session_state.arrestados}, indent=2),
+                       file_name=f"SVI_ACTA_{date.today()}.json")
 
 # =====================================================
-# 3. CUERPO DEL PROGRAMA (ESTRUCTURA DE CARGA)
+# 3. BLOQUE 1: INICIO (RECONSTRUIDO AL 100%)
 # =====================================================
-st.title("🚔 SVI - Sistema de Identificación y Sumarios")
-tabs = st.tabs(["1. Inicio (Operativo)", "2. Filiación (Legal)", "3. Inspección", "4. Secuestros", "5. Cierre e IA"])
+st.title("🚔 SVI - Sistema de Gestión de Actas")
+tabs = st.tabs(["1. Inicio (Datos Base)", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre"])
 
-# --- BLOQUE 1: LA ESENCIA ---
 with tabs[0]:
-    st.subheader("🛡️ Identificación del Procedimiento")
+    st.subheader("🛡️ Identificación Administrativa y Operativa")
+    
+    # Fila 1: Números y Dependencia
     c1, c2, c3, c4 = st.columns(4)
-    acta_n = c1.text_input("Nro. de Acta", placeholder="Ej: 154/2026")
-    incidencia = c2.text_input("Nro. Incidencia (911)")
-    dep_lista = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "SUB 18", "OTRO"]
-    dependencia = c3.selectbox("Dependencia", dep_lista)
-    movil = c4.text_input("Nro. de Móvil")
+    acta_n = c1.text_input("Nro. de Acta", placeholder="Ej: 154/26")
+    incidencia = c2.text_input("Nro. Incidencia (911)", placeholder="Ej: 2026-00123")
+    dependencia = c3.selectbox("Dependencia", ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "SUB 18", "OTRO"])
+    movil = c4.text_input("Nro. de Móvil", placeholder="Ej: 9845")
 
+    # Fila 2: Personal y Apoyo
     c5, c6 = st.columns(2)
     personal = c5.text_input("Personal Actuante", value="SubComisario Castañeda Juan")
-    refuerzo = c6.text_input("Refuerzo (Móviles/Personal en apoyo)")
+    refuerzo = c6.text_input("Refuerzo (Móviles/Personal de apoyo)")
 
+    # Fila 3: Tiempo
     c7, c8 = st.columns(2)
     fecha_acta = c7.date_input("Fecha", date.today())
     hora_acta = c8.time_input("Hora", datetime.now().time())
 
+    # Fila 4: Ubicaciones
     c9, c10 = st.columns(2)
-    lugar_hecho = c9.text_input("📍 Lugar del Hecho")
-    lugar_aprehension = c10.text_input("👮 Lugar de Aprehensión (si difiere)")
+    lugar_hecho = c9.text_input("📍 Lugar del Hecho", placeholder="Calle y Nro / Intersección")
+    lugar_aprehension = c10.text_input("👮 Lugar de Aprehensión", placeholder="Si difiere del lugar del hecho")
 
     st.divider()
-    st.session_state.relato_base = st.text_area("📝 Relato Circunstanciado (Cronología):", 
-                                               value=st.session_state.relato_base, height=350)
+    
+    # Fila 5: Relato
+    st.subheader("📝 Relato Circunstanciado")
+    st.session_state.relato_base = st.text_area("Narración cronológica y detallada:", 
+                                               value=st.session_state.relato_base, 
+                                               height=400,
+                                               placeholder="A la hora indicada, cumplimentando directivas de la Central 911...")
 
-# --- BLOQUE 2: FILIACIÓN DETALLADA ---
+# --- RESTO DE LOS BLOQUES (FILIACIÓN, INSPECCIÓN, ETC) ---
 with tabs[1]:
-    st.subheader("👤 Registro de Personas")
-    if st.button("➕ Cargar Aprehendido"):
-        st.session_state.arrestados.append({"apellido": "", "nombre": "", "dni": "", "hijo_de": "", "domicilio": ""})
-    
-    for i, a in enumerate(st.session_state.arrestados):
-        with st.expander(f"APREHENDIDO: {a['apellido'].upper()}"):
-            a["apellido"] = st.text_input("Apellido", a["apellido"], key=f"ap_{i}")
-            a["nombre"] = st.text_input("Nombre", a["nombre"], key=f"nom_{i}")
-            a["dni"] = st.text_input("DNI", a["dni"], key=f"dni_{i}")
-            a["hijo_de"] = st.text_input("Hijo de (Padre/Madre)", a["hijo_de"], key=f"hijo_{i}")
-            a["domicilio"] = st.text_input("Domicilio Real", a["domicilio"], key=f"dom_{i}")
+    st.info("Utilice el botón de la izquierda para sumar personas desde los móviles.")
+    # (Aquí iría el formulario de filiación que ya tenemos)
 
-# --- BLOQUE 4: SECUESTROS ---
-with tabs[3]:
-    st.subheader("📦 Detalle de Elementos Secuestrados")
-    if st.button("➕ Añadir Elemento"):
-        st.session_state.secuestros.append({"item": "", "serie": ""})
-    for i, s in enumerate(st.session_state.secuestros):
-        ca, cb = st.columns(2)
-        s["item"] = ca.text_input("Descripción (Marca/Modelo/Color)", s["item"], key=f"s_i_{i}")
-        s["serie"] = cb.text_input("N° Serie / Patente / IMEI", s["serie"], key=f"s_s_{i}")
-
-# --- BLOQUE 5: VISTA FINAL E IA ---
-with tabs[4]:
-    st.subheader("⚖️ Cierre Judicial")
-    fiscal = st.text_input("Fiscalía / Dr.")
-    directivas = st.text_area("Directivas Impartidas")
-    
-    if st.button("🚀 PREPARAR PAQUETE PARA REDACCIÓN"):
-        resumen = f"SUMARIO SVI - {dependencia}\nACTA N°: {acta_n} | 911: {incidencia}\n"
-        resumen += f"MÓVIL: {movil} | ACTUANTE: {personal}\n"
-        resumen += f"UBICACIÓN: {lugar_hecho}\nRELATO: {st.session_state.relato_base}"
-        st.success("Paquete listo para copiar a la IA")
-        st.code(resumen)
+with tabs[2]:
+    st.session_state.inspeccion_ocular = st.text_area("Detalles de la Inspección Ocular:", value=st.session_state.inspeccion_ocular, height=300)
