@@ -51,13 +51,33 @@ with st.sidebar:
 
             mapa = {
                 "lugar_aprehension": "l_apre",
+                "lugar de aprehension": "l_apre",
+                "lugar de aprehensión": "l_apre",
+                "l_apre": "l_apre",
+
                 "lugar_hecho": "l_hecho",
-                "relato_hechos": "relato"
+                "lugar del hecho": "l_hecho",
+                "l_hecho": "l_hecho",
+
+                "relato_hechos": "relato",
+                "relato de los hechos": "relato",
+                "narracion de los hechos": "relato",
+                "narración de los hechos": "relato",
+                "narracion": "relato",
+                "narración": "relato",
+                "narrativa": "relato",
+                "hechos": "relato",
+                "descripcion": "relato",
+                "descripción": "relato",
+                "relato_usuario": "relato",
+                "relato": "relato"
             }
 
             for k, v in datos_nuevos.items():
-                if k in mapa:
-                    st.session_state.data_operativa[mapa[k]] = v
+                clave = str(k).strip().lower()
+
+                if clave in mapa:
+                    st.session_state.data_operativa[mapa[clave]] = v
                 else:
                     st.session_state.data_operativa[k] = v
 
@@ -68,7 +88,7 @@ with st.sidebar:
 
     st.divider()
 
-    data_json = json.dumps(st.session_state.data_operativa, indent=4)
+    data_json = json.dumps(st.session_state.data_operativa, indent=4, ensure_ascii=False)
 
     st.download_button(
         label="💾 GUARDAR ACTA (JSON)",
