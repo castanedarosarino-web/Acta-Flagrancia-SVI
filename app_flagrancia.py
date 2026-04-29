@@ -3,43 +3,62 @@ import json
 from datetime import datetime
 
 # =====================================================
-# 1. CONFIGURACIÓN Y ESTÉTICA
+# 1. CONFIGURACIÓN Y ESTÉTICA (SVI PROFESIONAL)
 # =====================================================
-st.set_page_config(page_title="SVI - Sistema de Gestión", layout="wide")
+st.set_page_config(page_title="SVI - Acta de Procedimiento", layout="wide", page_icon="🚔")
+
+st.markdown("""
+    <style>
+    .main { background-color: #f8f9fa; }
+    .stTextInput { margin-top: -15px; }
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
 
 # =====================================================
-# 2. INICIALIZACIÓN DE MEMORIA (Session State)
+# 2. PERSISTENCIA DE DATOS (DICCIONARIO COMPLETO)
 # =====================================================
-# Definimos las llaves exactas que debe tener el JSON
+# Agregamos todas las llaves necesarias para que NADA se pierda
 if "data_operativa" not in st.session_state:
     st.session_state.data_operativa = {
-        "nro_acta": "", "incidencia": "", "dependencia": "CRE PÉREZ",
-        "dependencia_otra": "", "movil": "", "refuerzo": "", 
-        "l_hecho": "", "l_apre": "", "relato": "",
+        "nro_acta": "", 
+        "incidencia": "", 
+        "dependencia": "CRE PÉREZ",
+        "dependencia_otra": "", 
+        "movil": "", 
+        "refuerzo": "", 
+        "l_hecho": "", 
+        "l_apre": "", 
+        "relato": "",
         "personal": "Sub Comisario CASTAÑEDA Juan"
     }
 
 # =====================================================
-# 3. SIDEBAR - CARGA Y DESCARGA
+# 3. SIDEBAR (CENTRAL DE RECEPCIÓN)
 # =====================================================
 with st.sidebar:
     st.title("📂 Central de Recepción")
+    st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
+    
+    st.divider()
     st.subheader("📥 Cargar Trabajo de Calle")
     archivo_subido = st.file_uploader("Subir archivo JSON", type=["json"])
     
     if archivo_subido is not None:
         try:
             datos_nuevos = json.load(archivo_subido)
-            # Actualizamos la memoria interna
-            for k, v in datos_nuevos.items():
-                st.session_state.data_operativa[k] = v
-            st.success("✅ Datos sincronizados.")
-            st.rerun() # Forzamos el redibujado de la pantalla
+            # Actualizamos TODO el diccionario de una vez
+            st.session_state.data_operativa.update(datos_nuevos)
+            st.success("✅ Datos del móvil integrados.")
+            st.rerun() 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Error al cargar: {e}")
 
     st.divider()
-    # Generar JSON para descargar
+    
+    # LÓGICA DE DESCARGA: Guarda el estado actual
     data_json = json.dumps(st.session_state.data_operativa, indent=4)
     st.download_button(
         label="💾 GUARDAR ACTA (JSON)",
@@ -50,38 +69,69 @@ with st.sidebar:
     )
 
 # =====================================================
-# 4. CUERPO - BLOQUE 1 CON LLAVES (KEYS)
+# 4. CUERPO PRINCIPAL - BLOQUE 1
 # =====================================================
 st.title("🚔 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
+st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
 
-tabs = st.tabs(["1. Inicio", "2. Arrestado", "3. Victima", "4. Testigo"])
+tabs = st.tabs(["1. Inicio (Datos Base)", "2. Arrestado", "3. Victima", "4. Testigo", "5. Consulta", "6. Inspección", "7. Secuestros", "8. Cierre"])
 
 with tabs[0]:
     st.subheader("🛡️ Identificación Administrativa y Operativa")
     
-    col1, col2, col3, col4 = st.columns(4)
+    c1, c2, c3, c4 = st.columns(4)
+    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"])
+    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
     
-    # Usamos la memoria directamente para los valores
-    st.session_state.data_operativa["nro_acta"] = col1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"])
-    st.session_state.data_operativa["incidencia"] = col2.text_input("Nro. Incidencia", value=st.session_state.data_operativa["incidencia"])
+    dep_opciones = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
+    dep_actual = st.session_state.data_operativa.get("dependencia", "CRE PÉREZ")
+    idx_dep = dep_opciones.index(dep_actual) if dep_actual in dep_opciones else 0
     
-    # Dependencia
-    deps = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
-    idx = deps.index(st.session_state.data_operativa["dependencia"]) if st.session_state.data_operativa["dependencia"] in deps else 0
-    st.session_state.data_operativa["dependencia"] = col3.selectbox("Dependencia", deps, index=idx)
+    dep = c3.selectbox("Dependencia", dep_opciones, index=idx_dep)
     
-    st.session_state.data_operativa["movil"] = col4.text_input("Móvil", value=st.session_state.data_operativa["movil"])
+    if dep == "OTRO":
+        dep_otra = c4.text_input("Especifique Dependencia", value=st.session_state.data_operativa.get("dependencia_otra", ""))
+        n_movil = st.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
+    else:
+        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa.get("movil", ""))
+        dep_otra = ""
 
-    # LUGARES (Críticos)
-    st.session_state.data_operativa["l_hecho"] = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa["l_hecho"])
-    st.session_state.data_operativa["l_apre"] = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa["l_apre"])
+    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa.get("personal", "Sub Comisario CASTAÑEDA Juan"))
+    refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa.get("refuerzo", ""))
+
+    c5, c6 = st.columns(2)
+    fecha_proc = c5.date_input("Fecha", value=datetime.now())
+    hora_proc = c6.time_input("Hora", value=datetime.now())
+
+    # CAMPOS CRÍTICOS RECUPERADOS
+    lugar_hecho = st.text_input("📍 Lugar del Hecho", value=st.session_state.data_operativa.get("l_hecho", ""))
+    lugar_apre = st.text_input("👤 Lugar de Aprehensión", value=st.session_state.data_operativa.get("l_apre", ""))
 
     st.divider()
-    st.subheader("📝 Relato")
-    st.session_state.data_operativa["relato"] = st.text_area("Narración:", value=st.session_state.data_operativa["relato"], height=200)
+    st.subheader("📝 Relato Circunstanciado")
+    relato_usuario = st.text_area("Narración de los hechos:", 
+                                  value=st.session_state.data_operativa.get("relato", ""), 
+                                  height=200)
 
-    # Botón de copiado
-    if st.button("🚀 COPIAR PARA IA"):
-        prompt = f"Actuá como asistente policial... Redactá en 1ra persona plural: {st.session_state.data_operativa['relato']}"
-        st.components.v1.html(f"<script>navigator.clipboard.writeText(`{prompt}`);</script>", height=0)
-        st.success("Copiado.")
+    # Botón de copiado con prompt de coherencia
+    prompt_ia = f"""Actuá como asistente de redacción policial de la Provincia de Santa Fe. Necesito ordenar este relato para un acta de procedimiento. 
+REGLA CRÍTICA DE COHERENCIA: Mantené la narración en PRIMERA PERSONA DEL PLURAL (Nosotros). 
+Empezá con "Que..." y mantené una redacción clara y formal. \n\n{relato_usuario}"""
+
+    if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
+        st.components.v1.html(f"<script>navigator.clipboard.writeText(`{prompt_ia}`);</script>", height=0)
+        st.success("✅ Copiado al portapapeles.")
+
+    # ACTUALIZACIÓN FINAL DEL ESTADO (Para que el JSON sea fiel a lo que ves)
+    st.session_state.data_operativa.update({
+        "nro_acta": n_acta, 
+        "incidencia": n_incidencia, 
+        "dependencia": dep,
+        "dependencia_otra": dep_otra, 
+        "movil": n_movil, 
+        "relato": relato_usuario, 
+        "personal": personal_actuante, 
+        "refuerzo": refuerzos,
+        "l_hecho": lugar_hecho,
+        "l_apre": lugar_apre
+    })
