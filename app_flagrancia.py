@@ -47,14 +47,17 @@ with st.sidebar:
     archivo_subido = st.file_uploader("Subir archivo JSON", type=["json"])
     
     if archivo_subido is not None:
-        try:
-            datos_nuevos = json.load(archivo_subido)
-            # Actualizamos TODO el diccionario de una vez
-            st.session_state.data_operativa.update(datos_nuevos)
-            st.success("✅ Datos del móvil integrados.")
-            st.rerun() 
-        except Exception as e:
-            st.error(f"Error al cargar: {e}")
+    try:
+        datos_nuevos = json.loads(archivo_subido.getvalue().decode("utf-8"))
+
+        # Actualizamos SIN romper el estado ni forzar rerun
+        for k, v in datos_nuevos.items():
+            st.session_state.data_operativa[k] = v
+
+        st.success("✅ Datos del móvil integrados.")
+
+    except Exception as e:
+        st.error(f"Error al cargar: {e}")
 
     st.divider()
     
