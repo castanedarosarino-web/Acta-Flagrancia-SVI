@@ -22,7 +22,9 @@ st.markdown("""
 if "data_operativa" not in st.session_state:
     st.session_state.data_operativa = {
         "nro_acta": "", "incidencia": "", "dependencia": "CRE PÉREZ",
-        "movil": "", "refuerzo": "", "l_hecho": "", "l_apre": "", "relato": ""
+        "dependencia_otra": "", "movil": "", "refuerzo": "", 
+        "l_hecho": "", "l_apre": "", "relato": "",
+        "personal": "Sub Comisario CASTAÑEDA Juan"
     }
 
 # =====================================================
@@ -30,7 +32,6 @@ if "data_operativa" not in st.session_state:
 # =====================================================
 with st.sidebar:
     st.title("📂 Central de Recepción")
-    # CORRECCIÓN: Autoria en el sidebar sin la palabra 'Operador'
     st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
     
     st.divider()
@@ -42,27 +43,44 @@ with st.sidebar:
         st.toast("Guardando...")
 
 # =====================================================
-# 4. CUERPO PRINCIPAL - BLOQUE 1
+# 4. CUERPO PRINCIPAL - ESTRUCTURA DE ACTA
 # =====================================================
-# CORRECCIÓN: Título y Autoria exactamente donde indicaste
 st.title("🚔 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
 st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
 
-tabs = st.tabs(["1. Inicio (Datos Base)", "2. Filiación", "3. Inspección", "4. Secuestros", "5. Cierre"])
+# Pestañas actualizadas según tu nueva directiva
+tabs = st.tabs([
+    "1. Inicio (Datos Base)", 
+    "2. Arrestado", 
+    "3. Victima", 
+    "4. Testigo", 
+    "5. Consulta", 
+    "6. Inspección", 
+    "7. Secuestros", 
+    "8. Cierre"
+])
 
 with tabs[0]:
     st.subheader("🛡️ Identificación Administrativa y Operativa")
     
-    # FILA 1
+    # FILA 1: Dependencia con opción "Otro"
     c1, c2, c3, c4 = st.columns(4)
     n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"], placeholder="Ej: 154/26")
     n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"], placeholder="Ej: 2026-00123")
-    dep = c3.selectbox("Dependencia", ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M."], index=0)
-    n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"], placeholder="Ej: 9845")
+    
+    dep_opciones = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
+    dep = c3.selectbox("Dependencia", dep_opciones, index=0)
+    
+    # Campo extra si elige "OTRO"
+    if dep == "OTRO":
+        dep_otra = c4.text_input("Especifique Dependencia", value=st.session_state.data_operativa["dependencia_otra"])
+    else:
+        n_movil = c4.text_input("Nro. de Móvil", value=st.session_state.data_operativa["movil"], placeholder="Ej: 9845")
+        dep_otra = ""
 
-    # FILA 2
+    # FILA 2: Personal Actuante (Habilitado para editar)
     st.write("") 
-    personal_actuante = st.text_input("Personal Actuante", value="Sub Comisario CASTAÑEDA Juan", disabled=True)
+    personal_actuante = st.text_input("Personal Actuante", value=st.session_state.data_operativa["personal"])
     refuerzos = st.text_input("Refuerzo (Móviles/Personal de apoyo)", value=st.session_state.data_operativa["refuerzo"])
 
     # FILA 3: TIEMPO
@@ -83,9 +101,16 @@ with tabs[0]:
                           placeholder="A la hora indicada, cumplimentando directivas de la Central 911...",
                           height=200)
 
-    # Actualización del estado
+    # Actualización del estado (incluyendo el personal editado)
     st.session_state.data_operativa.update({
         "nro_acta": n_acta, "incidencia": n_incidencia, "dependencia": dep,
-        "movil": n_movil, "refuerzo": refuerzos, "l_hecho": lugar_hecho, 
-        "l_apre": lugar_apre, "relato": relato
+        "dependencia_otra": dep_otra, "movil": n_movil if dep != "OTRO" else "", 
+        "refuerzo": refuerzos, "l_hecho": lugar_hecho, 
+        "l_apre": lugar_apre, "relato": relato, "personal": personal_actuante
     })
+
+# Espacios para los nuevos bloques solicitados
+with tabs[1]: st.info("Módulo de Arrestado (con descripción por foto autónoma)")
+with tabs[2]: st.info("Módulo de Victima")
+with tabs[3]: st.info("Módulo de Testigo")
+with tabs[4]: st.info("Módulo de Consulta (Fiscalía/Juzgado)")
