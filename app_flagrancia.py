@@ -40,15 +40,17 @@ if "importacion_ok" not in st.session_state:
 
 
 # =====================================================
-# FUNCIONES DE IMPORTACIÓN / EXPORTACIÓN
+# FUNCIONES
 # =====================================================
-def preparar_exportacion():
+def sincronizar_relato():
+    st.session_state.data_operativa["relato"] = st.session_state.get("relato_usuario", "")
+
+
+def preparar_exportacion_manual():
     data_exportar = dict(st.session_state.data_operativa)
 
-    data_exportar["relato"] = st.session_state.get(
-        "relato_usuario",
-        st.session_state.data_operativa.get("relato", "")
-    )
+    # FORZADO FINAL: toma el relato directo del widget visible
+    data_exportar["relato"] = st.session_state.get("relato_usuario", "")
 
     return json.dumps(
         data_exportar,
@@ -74,26 +76,18 @@ def aplicar_importacion_controlada(
         "l_apre"
     ]
 
-    campos_permitidos_sin_riesgo = [
-        "refuerzo"
-    ]
-
-    # 1. Bloque 1: solo se importa si el operador lo autoriza
     if importar_bloque1:
         for campo in campos_bloque1_protegido:
             if datos.get(campo):
                 st.session_state.data_operativa[campo] = datos[campo]
 
-    # 2. Refuerzo: se puede importar aparte
     if importar_refuerzo:
-        for campo in campos_permitidos_sin_riesgo:
-            if datos.get(campo):
-                if st.session_state.data_operativa.get(campo):
-                    st.session_state.data_operativa[campo] += f" / {datos[campo]}"
-                else:
-                    st.session_state.data_operativa[campo] = datos[campo]
+        if datos.get("refuerzo"):
+            if st.session_state.data_operativa.get("refuerzo"):
+                st.session_state.data_operativa["refuerzo"] += f" / {datos['refuerzo']}"
+            else:
+                st.session_state.data_operativa["refuerzo"] = datos["refuerzo"]
 
-    # 3. Relato: nunca pisa, siempre suma
     relato_nuevo = datos.get("relato", "")
 
     if sumar_relato and relato_nuevo:
@@ -109,7 +103,6 @@ def aplicar_importacion_controlada(
 
         st.session_state.relato_usuario = st.session_state.data_operativa["relato"]
 
-    # 4. Historial de colaboraciones
     st.session_state.data_operativa["colaboraciones"].append({
         "fecha_importacion": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         "personal": datos.get("personal", "N/C"),
@@ -287,7 +280,8 @@ with tabs[0]:
     relato_usuario = st.text_area(
         "Narración de los hechos:",
         key="relato_usuario",
-        height=200
+        height=200,
+        on_change=sincronizar_relato
     )
 
     st.session_state.data_operativa.update({
@@ -296,7 +290,7 @@ with tabs[0]:
         "dependencia": dep,
         "dependencia_otra": dep_otra,
         "movil": n_movil,
-        "relato": st.session_state.relato_usuario,
+        "relato": st.session_state.get("relato_usuario", ""),
         "personal": personal_actuante,
         "refuerzo": refuerzos,
         "l_hecho": lugar_hecho,
@@ -305,7 +299,7 @@ with tabs[0]:
 
     if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
         st.components.v1.html(
-            f"<script>navigator.clipboard.writeText({json.dumps(st.session_state.relato_usuario, ensure_ascii=False)});</script>",
+            f"<script>navigator.clipboard.writeText({json.dumps(st.session_state.get('relato_usuario', ''), ensure_ascii=False)});</script>",
             height=0
         )
         st.success("✅ Copiado al portapapeles.")
@@ -318,7 +312,7 @@ with tabs[0]:
     if modo == "Colaborador":
         st.download_button(
             label="💾 EXPORTAR COLABORACIÓN",
-            data=preparar_exportacion(),
+            data=preparar_exportacion_manual(),
             file_name=f"colaboracion_{nombre_base}_{movil_base}.json",
             mime="application/json",
             use_container_width=True
@@ -327,7 +321,7 @@ with tabs[0]:
     else:
         st.download_button(
             label="💾 GUARDAR ACTA FINAL",
-            data=preparar_exportacion(),
+            data=preparar_exportacion_manual(),
             file_name=f"acta_final_{nombre_base}.json",
             mime="application/json",
             use_container_width=True
