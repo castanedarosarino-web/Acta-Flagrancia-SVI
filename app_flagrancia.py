@@ -32,6 +32,9 @@ if "data_operativa" not in st.session_state:
         "colaboraciones": []
     }
 
+if "relato_usuario" not in st.session_state:
+    st.session_state.relato_usuario = st.session_state.data_operativa.get("relato", "")
+
 def cargar_en_estado(datos, acumular_relato=False):
     campos = [
         "nro_acta", "incidencia", "dependencia", "dependencia_otra",
@@ -49,6 +52,8 @@ def cargar_en_estado(datos, acumular_relato=False):
             st.session_state.data_operativa["relato"] += "\n\n--- APORTE DE COLABORACIÓN ---\n" + relato_nuevo
         else:
             st.session_state.data_operativa["relato"] = relato_nuevo
+
+        st.session_state.relato_usuario = st.session_state.data_operativa["relato"]
 
     if acumular_relato:
         st.session_state.data_operativa["colaboraciones"].append(datos)
@@ -94,8 +99,14 @@ with st.sidebar:
     nombre_base = st.session_state.data_operativa.get("nro_acta", "SVI") or "SVI"
     movil_base = st.session_state.data_operativa.get("movil", "MOVIL") or "MOVIL"
 
+    data_exportar = dict(st.session_state.data_operativa)
+    data_exportar["relato"] = st.session_state.get(
+        "relato_usuario",
+        st.session_state.data_operativa.get("relato", "")
+    )
+
     data_json = json.dumps(
-        st.session_state.data_operativa,
+        data_exportar,
         indent=4,
         ensure_ascii=False
     )
@@ -213,9 +224,11 @@ with tabs[0]:
 
     relato_usuario = st.text_area(
         "Narración de los hechos:",
-        value=st.session_state.data_operativa.get("relato", ""),
+        key="relato_usuario",
         height=200
     )
+
+    st.session_state.data_operativa["relato"] = st.session_state.relato_usuario
 
     if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
         st.components.v1.html(
@@ -230,7 +243,7 @@ with tabs[0]:
         "dependencia": dep,
         "dependencia_otra": dep_otra,
         "movil": n_movil,
-        "relato": relato_usuario,
+        "relato": st.session_state.relato_usuario,
         "personal": personal_actuante,
         "refuerzo": refuerzos,
         "l_hecho": lugar_hecho,
