@@ -15,7 +15,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================
-# DATOS BASE
+# DATOS BASE - BLOQUE 1 PROTEGIDO
 # =====================================================
 if "data_operativa" not in st.session_state:
     st.session_state.data_operativa = {
@@ -36,33 +36,11 @@ if "relato_usuario" not in st.session_state:
     st.session_state.relato_usuario = st.session_state.data_operativa.get("relato", "")
 
 
-def cargar_en_estado(datos, acumular_relato=False):
-    campos = [
-        "nro_acta", "incidencia", "dependencia", "dependencia_otra",
-        "movil", "refuerzo", "l_hecho", "l_apre", "personal"
-    ]
-
-    for campo in campos:
-        if datos.get(campo):
-            st.session_state.data_operativa[campo] = datos[campo]
-
-    relato_nuevo = datos.get("relato", "")
-
-    if relato_nuevo:
-        if acumular_relato and st.session_state.data_operativa.get("relato"):
-            st.session_state.data_operativa["relato"] += "\n\n--- APORTE DE COLABORACIÓN ---\n" + relato_nuevo
-        else:
-            st.session_state.data_operativa["relato"] = relato_nuevo
-
-        st.session_state.relato_usuario = st.session_state.data_operativa["relato"]
-
-    if acumular_relato:
-        st.session_state.data_operativa["colaboraciones"].append(datos)
-
-
+# =====================================================
+# FUNCIONES DE IMPORTACIÓN / EXPORTACIÓN
+# =====================================================
 def preparar_exportacion():
     data_exportar = dict(st.session_state.data_operativa)
-
     data_exportar["relato"] = st.session_state.get(
         "relato_usuario",
         st.session_state.data_operativa.get("relato", "")
@@ -73,6 +51,68 @@ def preparar_exportacion():
         indent=4,
         ensure_ascii=False
     )
+
+
+def aplicar_importacion_controlada(
+    datos,
+    importar_bloque1=False,
+    sumar_relato=True,
+    importar_refuerzo=True
+):
+    campos_bloque1_protegido = [
+        "nro_acta",
+        "incidencia",
+        "dependencia",
+        "dependencia_otra",
+        "movil",
+        "personal",
+        "l_hecho",
+        "l_apre"
+    ]
+
+    campos_permitidos_sin_riesgo = [
+        "refuerzo"
+    ]
+
+    # 1. Bloque 1: solo se importa si el operador lo autoriza
+    if importar_bloque1:
+        for campo in campos_bloque1_protegido:
+            if datos.get(campo):
+                st.session_state.data_operativa[campo] = datos[campo]
+
+    # 2. Refuerzo: se puede importar aparte
+    if importar_refuerzo:
+        for campo in campos_permitidos_sin_riesgo:
+            if datos.get(campo):
+                if st.session_state.data_operativa.get(campo):
+                    st.session_state.data_operativa[campo] += f" / {datos[campo]}"
+                else:
+                    st.session_state.data_operativa[campo] = datos[campo]
+
+    # 3. Relato: nunca pisa, siempre suma
+    relato_nuevo = datos.get("relato", "")
+
+    if sumar_relato and relato_nuevo:
+        origen = datos.get("personal", "Colaborador")
+        movil_origen = datos.get("movil", "S/D")
+
+        marca = f"\n\n--- APORTE DE COLABORACIÓN: {origen} | Móvil: {movil_origen} ---\n"
+
+        if st.session_state.data_operativa.get("relato"):
+            st.session_state.data_operativa["relato"] += marca + relato_nuevo
+        else:
+            st.session_state.data_operativa["relato"] = marca.strip() + "\n" + relato_nuevo
+
+        st.session_state.relato_usuario = st.session_state.data_operativa["relato"]
+
+    # 4. Historial de colaboraciones
+    st.session_state.data_operativa["colaboraciones"].append({
+        "fecha_importacion": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "personal": datos.get("personal", "N/C"),
+        "movil": datos.get("movil", "S/D"),
+        "incluyo_relato": bool(relato_nuevo),
+        "bloque1_importado": importar_bloque1
+    })
 
 
 # =====================================================
@@ -93,6 +133,7 @@ with st.sidebar:
 
     if modo == "Central / Actero":
         st.subheader("📥 Importar Colaboración")
+
         archivo_colab = st.file_uploader(
             "Subir colaboración JSON",
             type=["json"],
@@ -102,14 +143,42 @@ with st.sidebar:
         if archivo_colab is not None:
             try:
                 datos_colab = json.loads(archivo_colab.getvalue().decode("utf-8"))
-                cargar_en_estado(datos_colab, acumular_relato=True)
-                st.success("✅ Colaboración incorporada al acta.")
+
+                st.warning("⚠️ Revise antes de importar. El Bloque 1 está protegido por defecto.")
+
+                with st.expander("👁️ Ver contenido recibido", expanded=True):
+                    st.write("**Personal:**", datos_colab.get("personal", "N/C"))
+                    st.write("**Móvil:**", datos_colab.get("movil", "S/D"))
+                    st.write("**Lugar del hecho:**", datos_colab.get("l_hecho", ""))
+                    st.write("**Lugar de aprehensión:**", datos_colab.get("l_apre", ""))
+                    st.write("**Relato recibido:**")
+                    st.text_area(
+                        "Vista previa del relato",
+                        value=datos_colab.get("relato", ""),
+                        height=160,
+                        disabled=True
+                    )
+
+                importar_relato = st.checkbox("✅ Sumar relato al acta", value=True)
+                importar_refuerzo = st.checkbox("✅ Incorporar refuerzo si corresponde", value=True)
+                importar_bloque1 = st.checkbox("⚠️ Permitir modificar datos del Bloque 1", value=False)
+
+                if st.button("📥 CONFIRMAR IMPORTACIÓN", use_container_width=True):
+                    aplicar_importacion_controlada(
+                        datos_colab,
+                        importar_bloque1=importar_bloque1,
+                        sumar_relato=importar_relato,
+                        importar_refuerzo=importar_refuerzo
+                    )
+                    st.success("✅ Colaboración incorporada con control del operador.")
+
             except Exception as e:
                 st.error(f"Error al importar colaboración: {e}")
 
     else:
         st.subheader("👮 Modo Colaborador")
         st.info("Complete el Bloque 1 y exporte su colaboración al final del relato.")
+
 
 # =====================================================
 # CUERPO PRINCIPAL - BLOQUE 1
