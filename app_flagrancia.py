@@ -12,8 +12,11 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
+# =====================================================
+# DATOS BASE
+# =====================================================
 if "data_operativa" not in st.session_state:
     st.session_state.data_operativa = {
         "nro_acta": "",
@@ -25,118 +28,98 @@ if "data_operativa" not in st.session_state:
         "l_hecho": "",
         "l_apre": "",
         "relato": "",
-        "personal": "Sub Comisario CASTAÑEDA Juan"
+        "personal": "Sub Comisario CASTAÑEDA Juan",
+        "colaboraciones": []
     }
 
+def cargar_en_estado(datos, acumular_relato=False):
+    campos = [
+        "nro_acta", "incidencia", "dependencia", "dependencia_otra",
+        "movil", "refuerzo", "l_hecho", "l_apre", "personal"
+    ]
+
+    for campo in campos:
+        if datos.get(campo):
+            st.session_state.data_operativa[campo] = datos[campo]
+
+    relato_nuevo = datos.get("relato", "")
+
+    if relato_nuevo:
+        if acumular_relato and st.session_state.data_operativa.get("relato"):
+            st.session_state.data_operativa["relato"] += "\n\n--- APORTE DE COLABORACIÓN ---\n" + relato_nuevo
+        else:
+            st.session_state.data_operativa["relato"] = relato_nuevo
+
+    if acumular_relato:
+        st.session_state.data_operativa["colaboraciones"].append(datos)
+
+# =====================================================
+# SIDEBAR
+# =====================================================
 with st.sidebar:
     st.title("📂 Central de Recepción")
     st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
 
     st.divider()
 
-    st.subheader("📥 Cargar Datos Administrativos")
-    archivo_json = st.file_uploader("Subir archivo JSON", type=["json"], key="json_admin")
-
-    if archivo_json is not None:
-        try:
-            datos_nuevos = json.loads(archivo_json.getvalue().decode("utf-8"))
-
-            campos_admin = [
-                "nro_acta",
-                "incidencia",
-                "dependencia",
-                "dependencia_otra",
-                "movil",
-                "refuerzo",
-                "l_hecho",
-                "l_apre",
-                "personal"
-            ]
-
-            mapa_admin = {
-                "nro acta": "nro_acta",
-                "nro_acta": "nro_acta",
-                "numero acta": "nro_acta",
-                "número acta": "nro_acta",
-                "acta": "nro_acta",
-
-                "incidencia": "incidencia",
-                "nro incidencia": "incidencia",
-                "nro_incidencia": "incidencia",
-                "numero incidencia": "incidencia",
-                "número incidencia": "incidencia",
-
-                "dependencia": "dependencia",
-                "dependencia otra": "dependencia_otra",
-                "dependencia_otra": "dependencia_otra",
-
-                "movil": "movil",
-                "móvil": "movil",
-                "nro movil": "movil",
-                "nro móvil": "movil",
-                "nro_movil": "movil",
-
-                "refuerzo": "refuerzo",
-                "personal": "personal",
-                "personal actuante": "personal",
-
-                "lugar_hecho": "l_hecho",
-                "lugar hecho": "l_hecho",
-                "lugar del hecho": "l_hecho",
-                "l_hecho": "l_hecho",
-
-                "lugar_aprehension": "l_apre",
-                "lugar_aprehensión": "l_apre",
-                "lugar aprehension": "l_apre",
-                "lugar aprehensión": "l_apre",
-                "lugar de aprehension": "l_apre",
-                "lugar de aprehensión": "l_apre",
-                "lugar_apre": "l_apre",
-                "lugar apre": "l_apre",
-                "l_apre": "l_apre",
-                "aprehension": "l_apre",
-                "aprehensión": "l_apre"
-            }
-
-            for k, v in datos_nuevos.items():
-                clave = str(k).strip().lower()
-
-                if clave in mapa_admin:
-                    st.session_state.data_operativa[mapa_admin[clave]] = v
-                elif clave in campos_admin:
-                    st.session_state.data_operativa[clave] = v
-
-            st.success("✅ Datos administrativos cargados.")
-
-        except Exception as e:
-            st.error(f"Error al cargar JSON: {e}")
-
-    st.divider()
-
-    st.subheader("📝 Cargar Relato")
-    archivo_txt = st.file_uploader("Subir relato TXT", type=["txt"], key="txt_relato")
-
-    if archivo_txt is not None:
-        try:
-            texto_relato = archivo_txt.getvalue().decode("utf-8")
-            st.session_state.data_operativa["relato"] = texto_relato
-            st.success("✅ Relato cargado desde TXT.")
-
-        except Exception as e:
-            st.error(f"Error al cargar TXT: {e}")
-
-    st.divider()
-
-    data_json = json.dumps(st.session_state.data_operativa, indent=4, ensure_ascii=False)
-
-    st.download_button(
-        label="💾 GUARDAR ACTA (JSON)",
-        data=data_json,
-        file_name=f"acta_{st.session_state.data_operativa.get('nro_acta', 'SVI')}.json",
-        mime="application/json",
-        use_container_width=True
+    modo = st.radio(
+        "Modo de trabajo",
+        ["Colaborador", "Central / Actero"]
     )
 
+    st.divider()
+
+    if modo == "Central / Actero":
+        st.subheader("📥 Importar Colaboración")
+        archivo_colab = st.file_uploader(
+            "Subir colaboración JSON",
+            type=["json"],
+            key="importar_colaboracion"
+        )
+
+        if archivo_colab is not None:
+            try:
+                datos_colab = json.loads(archivo_colab.getvalue().decode("utf-8"))
+                cargar_en_estado(datos_colab, acumular_relato=True)
+                st.success("✅ Colaboración incorporada al acta.")
+            except Exception as e:
+                st.error(f"Error al importar colaboración: {e}")
+
+    else:
+        st.subheader("👮 Modo Colaborador")
+        st.info("Complete el Bloque 1 y exporte su colaboración.")
+
+    st.divider()
+
+    nombre_base = st.session_state.data_operativa.get("nro_acta", "SVI") or "SVI"
+    movil_base = st.session_state.data_operativa.get("movil", "MOVIL") or "MOVIL"
+
+    data_json = json.dumps(
+        st.session_state.data_operativa,
+        indent=4,
+        ensure_ascii=False
+    )
+
+    if modo == "Colaborador":
+        st.download_button(
+            label="💾 EXPORTAR COLABORACIÓN",
+            data=data_json,
+            file_name=f"colaboracion_{nombre_base}_{movil_base}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    else:
+        st.download_button(
+            label="💾 GUARDAR ACTA FINAL",
+            data=data_json,
+            file_name=f"acta_final_{nombre_base}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+# =====================================================
+# CUERPO PRINCIPAL - BLOQUE 1
+# =====================================================
 st.title("🚔 ACTA DE PROCEDIMIENTO UR II _(S.I.V.)")
 st.subheader("Creado por Sub Comisario CASTAÑEDA Juan")
 
@@ -156,14 +139,25 @@ with tabs[0]:
 
     c1, c2, c3, c4 = st.columns(4)
 
-    n_acta = c1.text_input("Nro. de Acta", value=st.session_state.data_operativa["nro_acta"])
-    n_incidencia = c2.text_input("Nro. Incidencia (911)", value=st.session_state.data_operativa["incidencia"])
+    n_acta = c1.text_input(
+        "Nro. de Acta",
+        value=st.session_state.data_operativa["nro_acta"]
+    )
+
+    n_incidencia = c2.text_input(
+        "Nro. Incidencia (911)",
+        value=st.session_state.data_operativa["incidencia"]
+    )
 
     dep_opciones = ["CRE PÉREZ", "CRE FUNES", "CRE ROSARIO", "B.O.U.", "G.T.M.", "OTRO"]
     dep_actual = st.session_state.data_operativa.get("dependencia", "CRE PÉREZ")
     idx_dep = dep_opciones.index(dep_actual) if dep_actual in dep_opciones else 0
 
-    dep = c3.selectbox("Dependencia", dep_opciones, index=idx_dep)
+    dep = c3.selectbox(
+        "Dependencia",
+        dep_opciones,
+        index=idx_dep
+    )
 
     if dep == "OTRO":
         dep_otra = c4.text_input(
@@ -192,8 +186,16 @@ with tabs[0]:
     )
 
     c5, c6 = st.columns(2)
-    fecha_proc = c5.date_input("Fecha", value=datetime.now())
-    hora_proc = c6.time_input("Hora", value=datetime.now())
+
+    fecha_proc = c5.date_input(
+        "Fecha",
+        value=datetime.now()
+    )
+
+    hora_proc = c6.time_input(
+        "Hora",
+        value=datetime.now()
+    )
 
     lugar_hecho = st.text_input(
         "📍 Lugar del Hecho",
@@ -206,6 +208,7 @@ with tabs[0]:
     )
 
     st.divider()
+
     st.subheader("📝 Relato Circunstanciado")
 
     relato_usuario = st.text_area(
@@ -214,11 +217,9 @@ with tabs[0]:
         height=200
     )
 
-    prompt_ia = relato_usuario
-
     if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
         st.components.v1.html(
-            f"<script>navigator.clipboard.writeText(`{prompt_ia}`);</script>",
+            f"<script>navigator.clipboard.writeText({json.dumps(relato_usuario, ensure_ascii=False)});</script>",
             height=0
         )
         st.success("✅ Copiado al portapapeles.")
