@@ -35,12 +35,16 @@ if "data_operativa" not in st.session_state:
 if "relato_usuario" not in st.session_state:
     st.session_state.relato_usuario = st.session_state.data_operativa.get("relato", "")
 
+if "importacion_ok" not in st.session_state:
+    st.session_state.importacion_ok = False
+
 
 # =====================================================
 # FUNCIONES DE IMPORTACIÓN / EXPORTACIÓN
 # =====================================================
 def preparar_exportacion():
     data_exportar = dict(st.session_state.data_operativa)
+
     data_exportar["relato"] = st.session_state.get(
         "relato_usuario",
         st.session_state.data_operativa.get("relato", "")
@@ -122,6 +126,10 @@ with st.sidebar:
     st.title("📂 Central de Recepción")
     st.markdown("### **Creado por Sub Comisario CASTAÑEDA Juan**")
 
+    if st.session_state.importacion_ok:
+        st.success("✅ Colaboración incorporada con control del operador.")
+        st.session_state.importacion_ok = False
+
     st.divider()
 
     modo = st.radio(
@@ -170,7 +178,9 @@ with st.sidebar:
                         sumar_relato=importar_relato,
                         importar_refuerzo=importar_refuerzo
                     )
-                    st.success("✅ Colaboración incorporada con control del operador.")
+
+                    st.session_state.importacion_ok = True
+                    st.rerun()
 
             except Exception as e:
                 st.error(f"Error al importar colaboración: {e}")
