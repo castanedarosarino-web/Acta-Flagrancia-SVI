@@ -35,6 +35,7 @@ if "data_operativa" not in st.session_state:
 if "relato_usuario" not in st.session_state:
     st.session_state.relato_usuario = st.session_state.data_operativa.get("relato", "")
 
+
 def cargar_en_estado(datos, acumular_relato=False):
     campos = [
         "nro_acta", "incidencia", "dependencia", "dependencia_otra",
@@ -57,6 +58,22 @@ def cargar_en_estado(datos, acumular_relato=False):
 
     if acumular_relato:
         st.session_state.data_operativa["colaboraciones"].append(datos)
+
+
+def preparar_exportacion():
+    data_exportar = dict(st.session_state.data_operativa)
+
+    data_exportar["relato"] = st.session_state.get(
+        "relato_usuario",
+        st.session_state.data_operativa.get("relato", "")
+    )
+
+    return json.dumps(
+        data_exportar,
+        indent=4,
+        ensure_ascii=False
+    )
+
 
 # =====================================================
 # SIDEBAR
@@ -92,41 +109,7 @@ with st.sidebar:
 
     else:
         st.subheader("👮 Modo Colaborador")
-        st.info("Complete el Bloque 1 y exporte su colaboración.")
-
-    st.divider()
-
-    nombre_base = st.session_state.data_operativa.get("nro_acta", "SVI") or "SVI"
-    movil_base = st.session_state.data_operativa.get("movil", "MOVIL") or "MOVIL"
-
-    data_exportar = dict(st.session_state.data_operativa)
-    data_exportar["relato"] = st.session_state.get(
-        "relato_usuario",
-        st.session_state.data_operativa.get("relato", "")
-    )
-
-    data_json = json.dumps(
-        data_exportar,
-        indent=4,
-        ensure_ascii=False
-    )
-
-    if modo == "Colaborador":
-        st.download_button(
-            label="💾 EXPORTAR COLABORACIÓN",
-            data=data_json,
-            file_name=f"colaboracion_{nombre_base}_{movil_base}.json",
-            mime="application/json",
-            use_container_width=True
-        )
-    else:
-        st.download_button(
-            label="💾 GUARDAR ACTA FINAL",
-            data=data_json,
-            file_name=f"acta_final_{nombre_base}.json",
-            mime="application/json",
-            use_container_width=True
-        )
+        st.info("Complete el Bloque 1 y exporte su colaboración al final del relato.")
 
 # =====================================================
 # CUERPO PRINCIPAL - BLOQUE 1
@@ -228,15 +211,6 @@ with tabs[0]:
         height=200
     )
 
-    st.session_state.data_operativa["relato"] = st.session_state.relato_usuario
-
-    if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
-        st.components.v1.html(
-            f"<script>navigator.clipboard.writeText({json.dumps(relato_usuario, ensure_ascii=False)});</script>",
-            height=0
-        )
-        st.success("✅ Copiado al portapapeles.")
-
     st.session_state.data_operativa.update({
         "nro_acta": n_acta,
         "incidencia": n_incidencia,
@@ -249,3 +223,33 @@ with tabs[0]:
         "l_hecho": lugar_hecho,
         "l_apre": lugar_apre
     })
+
+    if st.button("🚀 COPIAR Y LISTO PARA PEGAR EN IA"):
+        st.components.v1.html(
+            f"<script>navigator.clipboard.writeText({json.dumps(st.session_state.relato_usuario, ensure_ascii=False)});</script>",
+            height=0
+        )
+        st.success("✅ Copiado al portapapeles.")
+
+    st.divider()
+
+    nombre_base = st.session_state.data_operativa.get("nro_acta", "SVI") or "SVI"
+    movil_base = st.session_state.data_operativa.get("movil", "MOVIL") or "MOVIL"
+
+    if modo == "Colaborador":
+        st.download_button(
+            label="💾 EXPORTAR COLABORACIÓN",
+            data=preparar_exportacion(),
+            file_name=f"colaboracion_{nombre_base}_{movil_base}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+    else:
+        st.download_button(
+            label="💾 GUARDAR ACTA FINAL",
+            data=preparar_exportacion(),
+            file_name=f"acta_final_{nombre_base}.json",
+            mime="application/json",
+            use_container_width=True
+        )
