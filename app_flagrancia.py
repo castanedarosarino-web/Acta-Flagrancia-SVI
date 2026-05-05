@@ -1,247 +1,111 @@
 import streamlit as st
 import json
 from fpdf import FPDF
+import datetime
 
-st.set_page_config(layout="wide")
-
-# =========================
-# AUTORÍA GLOBAL
-# =========================
-AUTOR = "Creado por Sub-Comisario Castañeda Juan - S.I.V."
-
-
-# =========================
-# FUNCION PDF BASE
-# =========================
-def crear_pdf(titulo, cuerpo):
+# --- FUNCIÓN GENERADORA DE PDF ---
+def generar_pdf_bloque_1(datos):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "POLICIA DE LA PROVINCIA DE SANTA FE", ln=True, align="C")
-    pdf.cell(0, 10, titulo, ln=True, align="C")
+    
+    # Encabezado Institucional
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "POLICIA DE LA PROVINCIA DE SANTA FE", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, "BLOQUE 1: PROTOCOLO DE ACTUACION E INICIO", ln=True, align='C')
+    pdf.ln(10)
+
+    # Cuerpo del Acta
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 10, "1. DATOS DEL ARRIBO Y PERSONAL:", ln=True)
+    pdf.set_font("Arial", size=10)
+    pdf.cell(0, 8, f"Fecha/Hora: {datos['fecha_hora']}", ln=True)
+    pdf.cell(0, 8, f"Primer Interviniente: {datos['interviniente']}", ln=True)
     pdf.ln(5)
 
-    pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 7, cuerpo)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 10, "2. PRESERVACION DEL LUGAR:", ln=True)
+    pdf.set_font("Arial", size=10)
+    pdf.cell(0, 8, f"Lugar Preservado: {datos['preservado']}", ln=True)
+    pdf.cell(0, 8, f"Perimetro establecido: {datos['perimetro']}", ln=True)
+    pdf.ln(5)
 
-    pdf.set_y(-20)
-    pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 10, AUTOR, align="R")
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 10, "3. RELEVAMIENTO DE CAMARAS Y ENTORNO:", ln=True)
+    pdf.set_font("Arial", size=10)
+    pdf.cell(0, 8, f"Camaras Publicas (911/Muni): {datos['cam_pub']}", ln=True)
+    pdf.cell(0, 8, f"Camaras Privadas: {datos['cam_priv']}", ln=True)
+    if datos['detalle_cam']:
+        pdf.multi_cell(0, 8, f"Detalle de Camaras: {datos['detalle_cam']}")
+    pdf.cell(0, 8, f"Iluminacion: {datos['iluminacion']}", ln=True)
+    pdf.cell(0, 8, f"Clima: {datos['clima']}", ln=True)
 
-    return bytes(pdf.output())
+    # Firma
+    pdf.set_y(-30)
+    pdf.set_font("Arial", 'I', 9)
+    pdf.cell(0, 10, f"Autor: Sub-Comisario Castaneda Juan - S.I.V.", align='R')
+    
+    return pdf.output()
 
+# --- INTERFAZ DEL PROGRAMA ---
+st.title("🚓 Bloque 1: Aseguramiento y Entorno")
+st.write("---")
 
-# =========================
-# INTERFAZ GENERAL
-# =========================
-st.title("🚓 ACTA DE PROCEDIMIENTO")
-st.subheader("PROTOCOLO DE ACTIVACIÓN AUTOMÁTICA POLICIAL PARA DELITOS DE FLAGRANCIA")
+# Fila 1: Arribo
+col1, col2 = st.columns(2)
+with col1:
+    fecha_hoy = st.date_input("Fecha del Hecho", datetime.date.today())
+    hora_arribo = st.time_input("Hora de Arribo")
+with col2:
+    personal = st.text_input("Primer Interviniente (Grado y Apellido)", placeholder="Ej: Of. Ppal. Perez")
 
-tabs = st.tabs([
-    "1. Inicio",
-    "2. Arrestado",
-    "3. Víctima",
-    "4. Testigo",
-    "5. Consulta",
-    "6. Inspección",
-    "7. Secuestros",
-    "8. Cierre"
-])
+st.write("---")
 
-# =====================================================
-# BLOQUE 1 — INICIO (BASE)
-# =====================================================
-with tabs[0]:
-    st.header("BLOQUE 1 — DATOS BASE")
+# Fila 2: Preservación
+st.subheader("🛡️ Medidas de Seguridad")
+c1, c2 = st.columns(2)
+with c1:
+    preservado_op = st.radio("¿Se preservó el lugar?", ["SÍ", "NO"], horizontal=True)
+with c2:
+    perimetro_op = st.radio("¿Se estableció perímetro (Cinta)?", ["SÍ", "NO"], horizontal=True)
 
-    nro = st.text_input("N° Acta")
-    lugar = st.text_input("Lugar del hecho")
-    personal = st.text_input("Personal actuante")
-    relato = st.text_area("Relato base")
+st.write("---")
 
-    if st.button("Guardar Bloque 1"):
-        st.session_state["b1"] = {
-            "nro": nro,
-            "lugar": lugar,
-            "personal": personal,
-            "relato": relato
-        }
-        st.success("Guardado")
+# Fila 3: Cámaras
+st.subheader("📹 Relevamiento de Cámaras y Visibilidad")
+ca1, ca2 = st.columns(2)
+with ca1:
+    pub = st.checkbox("Cámaras Públicas Detectadas")
+    priv = st.checkbox("Cámaras Privadas Detectadas")
+with ca2:
+    ilumina = st.selectbox("Condiciones de Iluminación", ["Óptima", "Regular", "Escasa", "Nula (Oscuridad)"])
+    clima = st.selectbox("Condiciones Climáticas", ["Despejado", "Lluvia", "Niebla", "Viento Fuerte"])
 
-    if "b1" in st.session_state:
-        texto = f"""
-ACTA N° {st.session_state['b1']['nro']}
+det_cam = st.text_area("Ubicación detallada de cámaras (Dirección/Local):")
 
-Lugar: {st.session_state['b1']['lugar']}
-Personal: {st.session_state['b1']['personal']}
+st.write("---")
 
-RELATO:
-{st.session_state['b1']['relato']}
-"""
-        pdf = crear_pdf("BLOQUE 1 - INICIO", texto)
+# BOTONES DE ACCIÓN
+if st.button("🚀 FINALIZAR BLOQUE 1 Y GENERAR ARCHIVOS"):
+    datos_completos = {
+        "fecha_hora": f"{fecha_hoy} {hora_arribo}",
+        "interviniente": personal,
+        "preservado": preservado_op,
+        "perimetro": perimetro_op,
+        "cam_pub": "SÍ" if pub else "NO",
+        "cam_priv": "SÍ" if priv else "NO",
+        "detalle_cam": det_cam,
+        "iluminacion": ilumina,
+        "clima": clima
+    }
 
-        st.download_button("📥 PDF BLOQUE 1", pdf, "bloque1.pdf")
-        st.download_button("📥 JSON BLOQUE 1", json.dumps(st.session_state["b1"]), "b1.json")
-
-
-# =====================================================
-# BLOQUE 2 — ARRESTADO
-# =====================================================
-with tabs[1]:
-    st.header("BLOQUE 2 — ARRESTADO")
-
-    nombre = st.text_input("Nombre")
-    dni = st.text_input("DNI")
-
-    if st.button("Guardar Arrestado"):
-        st.session_state["b2"] = {"nombre": nombre, "dni": dni}
-
-    if "b2" in st.session_state:
-        texto = f"Aprehendido: {nombre} DNI {dni}"
-        pdf = crear_pdf("ARRESTADO", texto)
-
-        st.download_button("📥 PDF", pdf, "b2.pdf")
-        st.download_button("📥 JSON", json.dumps(st.session_state["b2"]), "b2.json")
-
-
-# =====================================================
-# BLOQUE 3 — VÍCTIMA
-# =====================================================
-with tabs[2]:
-    st.header("BLOQUE 3 — VÍCTIMA")
-
-    v_nom = st.text_input("Nombre víctima")
-    v_rel = st.text_area("Relato víctima")
-
-    if st.button("Guardar Víctima"):
-        st.session_state["b3"] = {"nombre": v_nom, "relato": v_rel}
-
-    if "b3" in st.session_state:
-        texto = f"Víctima: {v_nom}\n\nRelato:\n{v_rel}"
-        pdf = crear_pdf("VÍCTIMA", texto)
-
-        st.download_button("📥 PDF", pdf, "b3.pdf")
-        st.download_button("📥 JSON", json.dumps(st.session_state["b3"]), "b3.json")
-
-
-# =====================================================
-# BLOQUE 4 — TESTIGO
-# =====================================================
-with tabs[3]:
-    st.header("BLOQUE 4 — TESTIGO")
-
-    t_nom = st.text_input("Nombre testigo")
-    t_tel = st.text_input("Teléfono")
-    t_mail = st.text_input("Correo")
-
-    if st.button("Guardar Testigo"):
-        st.session_state["b4"] = {
-            "nombre": t_nom,
-            "telefono": t_tel,
-            "correo": t_mail
-        }
-
-    if "b4" in st.session_state:
-        texto = f"Testigo: {t_nom}\nTel: {t_tel}\nMail: {t_mail}"
-        pdf = crear_pdf("TESTIGO", texto)
-
-        st.download_button("📥 PDF", pdf, "b4.pdf")
-        st.download_button("📥 JSON", json.dumps(st.session_state["b4"]), "b4.json")
-
-
-# =====================================================
-# BLOQUE 5 — CONSULTA
-# =====================================================
-with tabs[4]:
-    st.header("BLOQUE 5 — CONSULTA")
-
-    fiscal = st.text_input("Fiscal")
-    directivas = st.text_area("Directivas")
-
-    if st.button("Guardar Consulta"):
-        st.session_state["b5"] = {
-            "fiscal": fiscal,
-            "directivas": directivas
-        }
-
-    if "b5" in st.session_state:
-        texto = f"Fiscal: {fiscal}\n\nDirectivas:\n{directivas}"
-        pdf = crear_pdf("CONSULTA", texto)
-
-        st.download_button("📥 PDF", pdf, "b5.pdf")
-        st.download_button("📥 JSON", json.dumps(st.session_state["b5"]), "b5.json")
-
-
-# =====================================================
-# BLOQUE 6 — INSPECCIÓN (ANEXO)
-# =====================================================
-with tabs[5]:
-    st.header("BLOQUE 6 — INSPECCIÓN OCULAR (ANEXO)")
-
-    ins = st.text_area("Relato inspección")
-
-    if st.button("Guardar Inspección"):
-        st.session_state["b6"] = {"inspeccion": ins}
-
-    if "b6" in st.session_state:
-        pdf = crear_pdf("INSPECCIÓN OCULAR", ins)
-
-        st.download_button("📥 PDF", pdf, "b6.pdf")
-        st.download_button("📥 JSON", json.dumps(st.session_state["b6"]), "b6.json")
-
-
-# =====================================================
-# BLOQUE 7 — SECUESTROS (MULTIPLE)
-# =====================================================
-with tabs[6]:
-    st.header("BLOQUE 7 — SECUESTROS")
-
-    if "sec" not in st.session_state:
-        st.session_state["sec"] = []
-
-    desc = st.text_input("Descripción")
-    ubi = st.text_input("Ubicación")
-
-    if st.button("➕ Agregar Secuestro"):
-        st.session_state["sec"].append({"desc": desc, "ubi": ubi})
-
-    st.write(st.session_state["sec"])
-
-    if st.session_state["sec"]:
-        texto = "\n".join([f"{i+1}) {s['desc']} - {s['ubi']}" for i, s in enumerate(st.session_state["sec"])])
-        pdf = crear_pdf("SECUESTROS", texto)
-
-        st.download_button("📥 PDF", pdf, "b7.pdf")
-        st.download_button("📥 JSON", json.dumps(st.session_state["sec"]), "b7.json")
-
-
-# =====================================================
-# BLOQUE 8 — CIERRE (CONSOLIDA)
-# =====================================================
-with tabs[7]:
-    st.header("BLOQUE 8 — CIERRE")
-
-    if st.button("📄 Generar Acta Final"):
-        datos = st.session_state
-
-        texto = f"""
-ACTA FINAL
-
-{datos.get('b1', {}).get('relato', '')}
-
-Aprehendido:
-{datos.get('b2', {}).get('nombre', '')}
-
-Testigo:
-{datos.get('b4', {}).get('nombre', '')}
-
-INSPECCIÓN:
-Se deja constancia que obra acta de inspección ocular como ANEXO.
-
-SECUESTROS:
-{datos.get('sec', [])}
-"""
-
-        pdf = crear_pdf("ACTA FINAL", texto)
-
-        st.download_button("📥 ACTA FINAL PDF", pdf, "acta_final.pdf")
+    json_data = json.dumps(datos_completos, indent=4)
+    pdf_final = generar_pdf_bloque_1(datos_completos)
+    
+    st.success("✅ Bloque 1 consolidado correctamente.")
+    
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.download_button("📥 Descargar PDF Bloque 1", data=pdf_final, file_name="Bloque_1_Inicio.pdf", mime="application/pdf")
+    with col_b:
+        st.download_button("📥 Descargar JSON para Actante", data=json_data, file_name="bloque_1.json", mime="application/json")
